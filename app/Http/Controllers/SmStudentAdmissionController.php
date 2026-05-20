@@ -352,7 +352,7 @@ class SmStudentAdmissionController extends Controller
                 ->where('academic_id', $academic_year->id)
                 ->where('school_id', Auth::user()->school_id)
                 ->withoutGlobalScope(StatusAcademicSchoolScope::class)
-                ->get(['class_name', 'id']);
+                ->get(['class_name', 'id', 'board_name']);
 
             return response()->json([$classes]);
         } catch (Exception $exception) {

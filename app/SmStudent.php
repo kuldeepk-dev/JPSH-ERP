@@ -7,8 +7,10 @@ use Carbon\Carbon;
 use App\Scopes\SchoolScope;
 use App\Models\StudentRecord;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Models\FeesInstallmentCredit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Modules\OnlineExam\Entities\InfixPdfExam;
 use Modules\OnlineExam\Entities\InfixOnlineExam;
 use Modules\University\Entities\UnSubjectComplete;
@@ -866,5 +868,14 @@ class SmStudent extends Model
     {
         parent::boot();
         static::addGlobalScope(new SchoolScope);
+        static::addGlobalScope('selected_board', function (Builder $builder): void {
+            if (app()->runningInConsole() || !filled(selectedBoard())) {
+                return;
+            }
+
+            if (Schema::hasColumn('sm_students', 'board_name')) {
+                $builder->where('board_name', selectedBoard());
+            }
+        });
     }
 }

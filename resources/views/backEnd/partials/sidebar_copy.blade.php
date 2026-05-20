@@ -1635,6 +1635,11 @@
                                     {{-- <li> <a href="{{route('base_group')}}">@lang('system_settings.base_group')</a> </li> --}}
                                 @endif
                                 @if (!moduleStatusCheck('University'))
+                                    @if (userPermission(405) && menuStatus(405))
+                                        <li data-position="{{ menuPosition(405) }}">
+                                            <a href="{{ route('boards') }}">@lang('system_settings.boards')</a>
+                                        </li>
+                                    @endif
                                     @if (userPermission(432) && menuStatus(432))
                                         <li data-position="{{ menuPosition(432) }}">
                                             <a href="{{ route('academic-year') }}">@lang('common.academic_year')</a>

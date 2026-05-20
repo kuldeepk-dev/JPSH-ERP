@@ -48,14 +48,18 @@ class SmAcademicYearController extends Controller
     public function store(SmAcademicYearRequest $smAcademicYearRequest)
     {
         $yr = SmAcademicYear::orderBy('id', 'desc')->where('school_id', Auth::user()->school_id)->first();
-        $created_year = $smAcademicYearRequest->starting_date;
+        $created_year = $smAcademicYearRequest->starting_date ?: now()->toDateString();
 
         DB::beginTransaction();
         $smAcademicYear = new SmAcademicYear();
         $smAcademicYear->year = $smAcademicYearRequest->year;
         $smAcademicYear->title = $smAcademicYearRequest->title;
-        $smAcademicYear->starting_date = date('Y-m-d', strtotime($smAcademicYearRequest->starting_date));
-        $smAcademicYear->ending_date = date('Y-m-d', strtotime($smAcademicYearRequest->ending_date));
+        $smAcademicYear->starting_date = $smAcademicYearRequest->starting_date
+            ? date('Y-m-d', strtotime($smAcademicYearRequest->starting_date))
+            : null;
+        $smAcademicYear->ending_date = $smAcademicYearRequest->ending_date
+            ? date('Y-m-d', strtotime($smAcademicYearRequest->ending_date))
+            : null;
         if ($smAcademicYearRequest->copy_with_academic_year !== null) {
             $smAcademicYear->copy_with_academic_year = implode(',', $smAcademicYearRequest->copy_with_academic_year);
         }
@@ -182,7 +186,7 @@ class SmAcademicYearController extends Controller
         $input = $request->all();
         $validator = Validator::make($input, [
             'year' => 'required|numeric|digits:4',
-            'title' => 'required|max:150',
+            'title' => 'required|numeric|digits:4',
         ]);
 
         if ($validator->fails()) {
@@ -195,7 +199,6 @@ class SmAcademicYearController extends Controller
         */
             $yr = SmAcademicYear::where('id', getAcademicId())->where('school_id', Auth::user()->school_id)->first();
             // dd($request->year);
-            $created_year = $request->starting_date;
             // if ($yr->year == $request->year) {
             //     Toastr::warning('You cannot copy current academic year info.', 'Warning');
 
@@ -208,10 +211,16 @@ class SmAcademicYearController extends Controller
                 $academic_year = SmAcademicYear::where('id', $request->id)->where('school_id', Auth::user()->school_id)->first();
             }
 
+            $created_year = $request->starting_date ?: ($academic_year->created_at ?: now()->toDateString());
+
             $academic_year->year = $request->year;
             $academic_year->title = $request->title;
-            $academic_year->starting_date = date('Y-m-d', strtotime($request->starting_date));
-            $academic_year->ending_date = date('Y-m-d', strtotime($request->ending_date));
+            if ($request->filled('starting_date')) {
+                $academic_year->starting_date = date('Y-m-d', strtotime($request->starting_date));
+            }
+            if ($request->filled('ending_date')) {
+                $academic_year->ending_date = date('Y-m-d', strtotime($request->ending_date));
+            }
             $academic_year->created_at = $created_year;
             if ($yr->year != $request->year && $request->copy_with_academic_year != null) {
                 $academic_year->copy_with_academic_year = implode(',', $request->copy_with_academic_year);

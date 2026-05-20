@@ -67,6 +67,21 @@
                                             $section_id = $assign_class_teacher->section_id;
                                         }
                                     ?>
+                                    @if (isAllBoardsContext())
+                                        <div class="row">
+                                            <div class="col-lg-12 mt-15">
+                                                <div class="primary_input">
+                                                    <label class="primary_input_label" for="assign_board_name">@lang('common.board')</label>
+                                                    <select class="primary_select form-control" id="assign_board_name">
+                                                        <option data-display="Select Board" value="">Select Board</option>
+                                                        @foreach (generalBoards() as $board)
+                                                            <option value="{{ $board }}">{{ $board }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                     <div class="row">
                                         @include('backEnd.shift.shift_class_section_include', [
                                             'div' => shiftEnable() ? 'col-lg-12' : 'col-lg-12',
@@ -167,6 +182,7 @@
 
                                             <tr>
                                                 <th>@lang('common.class')</th>
+                                                <th>@lang('common.board')</th>
                                                 <th>@lang('common.section')</th>
                                                 @if(shiftEnable())
                                                     <th>@lang('common.shift')</th>
@@ -180,6 +196,9 @@
                                                 <tr>
                                                     <td valign="top">
                                                         {{ @$assign_class_teacher->class != '' ? @$assign_class_teacher->class->class_name : '' }}
+                                                    </td>
+                                                    <td valign="top">
+                                                        {{ @$assign_class_teacher->class != '' ? (@$assign_class_teacher->class->board_name ?? '-') : '-' }}
                                                     </td>
                                                     <td valign="top">
                                                         {{ @$assign_class_teacher->section != '' ? @$assign_class_teacher->section->section_name : '' }}
@@ -268,5 +287,50 @@
             </div>
         </div>
     </section>
+@push('script')
+    <script>
+        $(document).ready(function () {
+            function filterClassesByBoard(boardName) {
+                var $classSelect = $('#common_select_class');
+                if (!$classSelect.length) {
+                    return;
+                }
+
+                $classSelect.find('option').each(function () {
+                    var $option = $(this);
+                    var optionValue = $option.val();
+                    var optionBoard = $option.data('board-name');
+
+                    if (!optionValue) {
+                        $option.show();
+                        return;
+                    }
+
+                    if (!boardName) {
+                        $option.show();
+                        return;
+                    }
+
+                    if (optionBoard === boardName) {
+                        $option.show();
+                    } else {
+                        $option.hide();
+                    }
+                });
+
+                var selectedOption = $classSelect.find('option:selected');
+                if (selectedOption.length && selectedOption.is(':hidden')) {
+                    $classSelect.val('').trigger('change');
+                }
+            }
+
+            $('#assign_board_name').on('change', function () {
+                filterClassesByBoard($(this).val());
+            });
+
+            filterClassesByBoard($('#assign_board_name').val());
+        });
+    </script>
+@endpush
 @endsection
 @include('backEnd.partials.data_table_js')

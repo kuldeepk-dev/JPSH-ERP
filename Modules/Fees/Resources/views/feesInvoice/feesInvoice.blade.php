@@ -87,14 +87,8 @@
                                 </div>
 
                                 <div class="add-visitor">
-                                    <div class="row">
-                                        <div class="col-lg-12 d-flex">
-                                            <div>@lang('fees.invoice')- &nbsp;</div>
-                                            <div class="d-flex" id="showValue"></div>
-                                            <input type="hidden" id="fees_invoice_prefix"
-                                                value="{{ @$invoiceSettings->prefix }}">
-                                        </div>
-                                    </div>
+                                    <input type="hidden" id="fees_invoice_prefix"
+                                        value="{{ @$invoiceSettings->prefix }}">
 
                                     @if (moduleStatusCheck('University'))
                                         @includeIf(
@@ -138,6 +132,19 @@
                                             </div>
                                         </div>
                                     @else
+                                        @if (isAllBoardsContext())
+                                            <div class="row">
+                                                <div class="col-lg-12 mt-30-md">
+                                                    <label class="primary_input_label" for="fees_board_name">@lang('common.board')</label>
+                                                    <select class="primary_select form-control" id="fees_board_name">
+                                                        <option data-display="Select Board" value="">Select Board</option>
+                                                        @foreach (generalBoards() as $board)
+                                                            <option value="{{ $board }}">{{ $board }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        @endif
                                         @if(shiftEnable())
                                         <div class="row">
                                             @includeIf('backEnd.shift.shift_include', [
@@ -159,7 +166,7 @@
                                                     <option data-display="@lang('common.select_class') *" value="">
                                                         @lang('common.select_class')</option>
                                                     @foreach ($classes as $class)
-                                                        <option value="{{ $class->id }}"
+                                                        <option value="{{ $class->id }}" data-board-name="{{ $class->board_name ?? '' }}"
                                                             {{ isset($invoiceInfo) ? ($invoiceInfo->class_id == $class->id ? 'selected' : '') : '' }}>
                                                             {{ @$class->class_name }}</option>
                                                     @endforeach
@@ -587,6 +594,57 @@
     <script type="text/javascript" src="{{ url('Modules\Fees\Resources\assets\js\app.js') }}"></script>
     <script>
         selectPosition({!! feesInvoiceSettings()->invoice_positions !!});
+    </script>
+    <script>
+        $(document).ready(function() {
+            var originalClassOptions = null;
+
+            function ensureOriginalClassOptions() {
+                var $classSelect = $('#select_class');
+                if (!originalClassOptions && $classSelect.length) {
+                    originalClassOptions = $classSelect.find('option').clone();
+                }
+            }
+
+            function filterInvoiceClassesByBoard(boardName) {
+                var $classSelect = $('#select_class');
+                if (!$classSelect.length) {
+                    return;
+                }
+
+                ensureOriginalClassOptions();
+                if (!originalClassOptions) {
+                    return;
+                }
+
+                var $filtered = originalClassOptions.filter(function() {
+                    var $option = $(this);
+                    var optionValue = $option.val();
+                    var optionBoard = $option.data('board-name');
+
+                    if (!optionValue) {
+                        return true;
+                    }
+
+                    if (!boardName) {
+                        return true;
+                    }
+
+                    return optionBoard === boardName;
+                });
+
+                $classSelect.empty().append($filtered);
+                $classSelect.val('');
+                $classSelect.niceSelect('update');
+                $classSelect.trigger('change');
+            }
+
+            $('#fees_board_name').on('change', function() {
+                filterInvoiceClassesByBoard($(this).val());
+            });
+
+            filterInvoiceClassesByBoard($('#fees_board_name').val());
+        });
     </script>
     <script>
         $(document).ready(function() {

@@ -112,7 +112,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                 <?php echo e(__('common.select_class')); ?> <?php echo e(in_array('class', $required) ? '*' : ''); ?></option>
             <?php if(isset($classes)): ?>
             <?php $__currentLoopData = $classes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $class): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <option value="<?php echo e($class->id); ?>" <?php echo e(isset($class_id) ? ($class_id == $class->id ? 'selected' : '') : ''); ?>>
+            <option value="<?php echo e($class->id); ?>" data-board-name="<?php echo e($class->board_name ?? ''); ?>" <?php echo e(isset($class_id) ? ($class_id == $class->id ? 'selected' : '') : ''); ?>>
                 <?php echo e($class->class_name); ?></option>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             <?php endif; ?>
@@ -272,6 +272,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                                 $("<option>", {
                                     value: className.id,
                                     text: className.class_name,
+                                    "data-board-name": className.board_name ? className.board_name : "",
                                 })
                             );
                         });
@@ -322,6 +323,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                                 $("<option>", {
                                     value: className.id,
                                     text: className.name,
+                                    "data-board-name": className.board_name ? className.board_name : "",
                                 })
                             );
                         });
@@ -516,4 +518,5 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
     //     });
     // }
 </script>
-<?php $__env->stopPush(); ?><?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/shift/shift_class_section_include.blade.php ENDPATH**/ ?>
+<?php $__env->stopPush(); ?>
+<?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/shift/shift_class_section_include.blade.php ENDPATH**/ ?>

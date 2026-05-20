@@ -87189,12 +87189,16 @@ Vue.component('side-panel-component', __webpack_require__(/*! ./components/chat/
 Vue.component('status-change-component', __webpack_require__(/*! ./components/chat/StatusChangeComponent.vue */ "./resources/js/components/chat/StatusChangeComponent.vue")["default"]);
 
 Vue.use(vue_chat_scroll__WEBPACK_IMPORTED_MODULE_0___default.a);
-var app = new Vue({
-  el: '#admin-visitor-area'
-});
-var app1 = new Vue({
-  el: '#main-nav-for-chat'
-});
+if (document.getElementById('admin-visitor-area')) {
+  new Vue({
+    el: '#admin-visitor-area'
+  });
+}
+if (document.getElementById('main-nav-for-chat')) {
+  new Vue({
+    el: '#main-nav-for-chat'
+  });
+}
 
 /***/ }),
 

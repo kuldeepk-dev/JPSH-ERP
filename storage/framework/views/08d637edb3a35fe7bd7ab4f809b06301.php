@@ -121,7 +121,8 @@
                             <?php else: ?>
                                 <option value="<?php echo e(@$academic_year->id); ?>"
                                     <?php echo e(getAcademicId() == @$academic_year->id ? 'selected' : ''); ?>>
-                                    <?php echo e(@$academic_year->year); ?> [<?php echo e(@$academic_year->title); ?>]
+                                    <?php echo e(@$academic_year->year); ?> - <?php echo e(@$academic_year->title); ?>
+
                                 </option>
                             <?php endif; ?>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -525,6 +526,11 @@
 <?php endif; ?>
 
 <script>
+    window.erpBoardContext = {
+        selectedBoard: <?php echo json_encode(selectedBoard(), 15, 512) ?>,
+        isAllBoardsContext: <?php echo json_encode(isAllBoardsContext(), 15, 512) ?>,
+    };
+
     var position = '<?php echo e($position); ?>';
     var tawkposition = '';
 
@@ -556,6 +562,33 @@
 	};
 
     $(document).ready(function () {
+        if (!window.erpBoardContext.isAllBoardsContext) {
+            const selectedBoard = window.erpBoardContext.selectedBoard;
+
+            $('select[name="board_id"], select[name="board_name"]').each(function () {
+                const $select = $(this);
+
+                $select.find('option').each(function () {
+                    const value = $(this).val();
+                    if (value === '' || value !== selectedBoard) {
+                        $(this).remove();
+                    }
+                });
+
+                if (selectedBoard) {
+                    if (!$select.find('option[value="' + selectedBoard + '"]').length) {
+                        $select.append($('<option>', { value: selectedBoard, text: selectedBoard }));
+                    }
+                    $select.val(selectedBoard);
+                }
+
+                if ($select.hasClass('nice_Select') || $select.hasClass('primary_select')) {
+                    $select.niceSelect('update');
+                }
+            });
+
+            $('.global_board_filter_wrap').hide();
+        }
 
         $('#infix_session_mbl').on('change', function () {
             const selectedSession = $(this).val();

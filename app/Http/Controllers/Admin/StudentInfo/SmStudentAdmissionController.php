@@ -50,6 +50,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Traits\DirectFeesAssignTrait;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Schema;
+use App\Models\StudentAdmissionApplication;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Modules\Saas\Entities\SmPackagePlan;
 use App\Scopes\StatusAcademicSchoolScope;
 use Illuminate\Support\Facades\Validator;
@@ -129,12 +132,17 @@ class SmStudentAdmissionController extends Controller
             $data = static::loadData();
             $data['max_admission_id'] = SmStudent::where('school_id', Auth::user()->school_id)->max('admission_no');
             $data['max_roll_id'] = SmStudent::where('school_id', Auth::user()->school_id)->max('roll_no');
+            $data['draft_application'] = StudentAdmissionApplication::where('user_id', Auth::id())
+                ->where('school_id', Auth::user()->school_id)
+                ->where('status', 'draft')
+                ->latest('id')
+                ->first();
 
             if (moduleStatusCheck('University')) {
                 return view('university::admission.add_student_admission', $data);
             }
 
-            return view('backEnd.studentInformation.student_admission', $data);
+            return view('backEnd.studentInformation.student_admission_wizard', $data);
         /*
         } catch (Exception $exception) {
             Toastr::error('Operation Failed', 'Failed');
@@ -142,6 +150,59 @@ class SmStudentAdmissionController extends Controller
             return redirect()->back();
         }
         */
+    }
+
+    public function getClassesByBoard(Request $request, string $board_id)
+    {
+        try {
+            $academicId = $request->input('academic_id', getAcademicId());
+            $classes = SmClass::query()
+                ->where('active_status', 1)
+                ->where('school_id', auth()->user()->school_id)
+                ->where('academic_id', $academicId)
+                ->where('board_name', $board_id)
+                ->withoutGlobalScope(StatusAcademicSchoolScope::class)
+                ->select('id', 'class_name')
+                ->orderBy('class_name')
+                ->get();
+
+            return response()->json($classes);
+        } catch (Exception $exception) {
+            return response()->json([], 404);
+        }
+    }
+
+    public function getSectionsByBoardClass(Request $request, string $board_id, int $class_id)
+    {
+        try {
+            $academicId = $request->input('academic_id', getAcademicId());
+            $class = SmClass::query()
+                ->where('id', $class_id)
+                ->where('school_id', auth()->user()->school_id)
+                ->where('academic_id', $academicId)
+                ->where('board_name', $board_id)
+                ->withoutGlobalScope(StatusAcademicSchoolScope::class)
+                ->first();
+
+            if (!$class) {
+                return response()->json([]);
+            }
+
+            $sections = DB::table('sm_class_sections')
+                ->join('sm_sections', 'sm_sections.id', '=', 'sm_class_sections.section_id')
+                ->where('sm_class_sections.class_id', $class_id)
+                ->where('sm_class_sections.school_id', auth()->user()->school_id)
+                ->where('sm_class_sections.academic_id', $academicId)
+                ->where('sm_sections.active_status', 1)
+                ->select('sm_sections.id', 'sm_sections.section_name')
+                ->orderBy('sm_sections.section_name')
+                ->distinct()
+                ->get();
+
+            return response()->json($sections);
+        } catch (Exception $exception) {
+            return response()->json([], 404);
+        }
     }
 
     public function store(SmStudentAdmissionRequest $smStudentAdmissionRequest)
@@ -363,6 +424,9 @@ class SmStudentAdmissionController extends Controller
             $smStudent->route_list_id = $smStudentAdmissionRequest->route;
             $smStudent->dormitory_id = $smStudentAdmissionRequest->dormitory_name;
             $smStudent->room_id = $smStudentAdmissionRequest->room_number;
+            if (Schema::hasColumn('sm_students', 'board_name')) {
+                $smStudent->board_name = $smStudentAdmissionRequest->board_id;
+            }
 
             if (! empty($smStudentAdmissionRequest->vehicle)) {
                 $driver = SmVehicle::where('id', '=', $smStudentAdmissionRequest->vehicle)
@@ -418,6 +482,8 @@ class SmStudentAdmissionController extends Controller
 
             // end lead convert to student
             $smStudent->save();
+
+            $this->createAdmissionApplication($smStudentAdmissionRequest, $smStudent, 'pending');
 
             $paren_s = @$parent;
             $childrens = !empty($paren_s) ? $paren_s?->childrens:null;
@@ -554,6 +620,170 @@ class SmStudentAdmissionController extends Controller
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
+    }
+
+    public function saveDraft(Request $request)
+    {
+        $payload = $this->buildAdmissionPayload($request, null);
+        $application = StudentAdmissionApplication::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'school_id' => Auth::user()->school_id,
+                'status' => 'draft',
+            ],
+            [
+                'academic_id' => getAcademicId(),
+                'data_json' => json_encode($payload),
+            ]
+        );
+
+        if (! $application->application_id) {
+            $application->application_id = $this->buildApplicationId($application->id);
+            $application->save();
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'application_id' => $application->application_id,
+        ]);
+    }
+
+    public function applications()
+    {
+        $applications = StudentAdmissionApplication::where('school_id', Auth::user()->school_id)
+            ->where('status', '!=', 'draft')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('backEnd.studentInformation.student_admission_applications', [
+            'applications' => $applications,
+        ]);
+    }
+
+    public function applicationShow(int $id)
+    {
+        $application = StudentAdmissionApplication::where('school_id', Auth::user()->school_id)->findOrFail($id);
+        $payload = json_decode((string) $application->data_json, true) ?: [];
+
+        return view('backEnd.studentInformation.student_admission_application_show', [
+            'application' => $application,
+            'payload' => $payload,
+        ]);
+    }
+
+    public function applicationStatus(Request $request, int $id)
+    {
+        $request->validate([
+            'status' => ['required', 'in:pending,under_review,approved,rejected'],
+        ]);
+
+        $application = StudentAdmissionApplication::where('school_id', Auth::user()->school_id)->findOrFail($id);
+        $application->status = $request->status;
+        $application->save();
+
+        Toastr::success('Status updated', 'Success');
+        return redirect()->back();
+    }
+
+    public function applicationPdf(int $id)
+    {
+        $application = StudentAdmissionApplication::where('school_id', Auth::user()->school_id)->findOrFail($id);
+        $payload = json_decode((string) $application->data_json, true) ?: [];
+
+        $pdf = Pdf::loadView('backEnd.studentInformation.student_admission_application_pdf', [
+            'application' => $application,
+            'payload' => $payload,
+        ]);
+
+        return $pdf->download($application->application_id . '.pdf');
+    }
+
+    private function buildApplicationId(int $id): string
+    {
+        return 'ADM-' . str_pad((string) $id, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function buildAdmissionPayload(Request $request, ?SmStudent $student): array
+    {
+        $payload = $request->except([
+            '_token',
+            'files',
+            'photo',
+        ]);
+
+        $payload['student_id'] = $student?->id;
+        $payload['submitted_at'] = now()->toDateTimeString();
+
+        return $payload;
+    }
+
+    private function createAdmissionApplication(Request $request, SmStudent $student, string $status): void
+    {
+        $payload = $this->buildAdmissionPayload($request, $student);
+        $payload['documents'] = $this->uploadAdmissionDocuments($request);
+        $payload['documents'] = $this->uploadAdmissionDocuments($request);
+        $application = StudentAdmissionApplication::where('user_id', Auth::id())
+            ->where('school_id', Auth::user()->school_id)
+            ->where('status', 'draft')
+            ->latest('id')
+            ->first();
+
+        if ($application) {
+            $application->student_id = $student->id;
+            $application->status = $status;
+            $application->data_json = json_encode($payload);
+            $application->submitted_at = now();
+            $application->save();
+        } else {
+            $application = StudentAdmissionApplication::create([
+                'user_id' => Auth::id(),
+                'student_id' => $student->id,
+                'school_id' => Auth::user()->school_id,
+                'academic_id' => getAcademicId(),
+                'status' => $status,
+                'data_json' => json_encode($payload),
+                'submitted_at' => now(),
+            ]);
+        }
+
+        if (! $application->application_id) {
+            $application->application_id = $this->buildApplicationId($application->id);
+            $application->save();
+        }
+    }
+
+    private function uploadAdmissionDocuments(Request $request): array
+    {
+        $destination = 'public/uploads/student/application/';
+        $documents = [];
+
+        $documentFields = [
+            'document_birth_certificate',
+            'document_transfer_certificate',
+            'document_passport_photos',
+            'document_report_card',
+            'document_category_certificate',
+            'document_aadhaar',
+        ];
+
+        foreach ($documentFields as $field) {
+            if ($request->hasFile($field)) {
+                $files = $request->file($field);
+                $paths = [];
+
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        $paths[] = fileUpload($file, $destination);
+                    }
+                } else {
+                    $paths[] = fileUpload($files, $destination);
+                }
+
+                $documents[$field] = $paths;
+            }
+        }
+
+        return $documents;
     }
 
     public function edit(Request $request, $id)
@@ -1197,6 +1427,9 @@ class SmStudentAdmissionController extends Controller
             $studentRecord->section_id = $request->section;
             $studentRecord->shift_id = shiftEnable() ? $request->shift : '';
             $studentRecord->session_id = $request->session;
+            if (Schema::hasColumn('student_records', 'board_name')) {
+                $studentRecord->board_name = $request->board_id;
+            }
         }
 
         $studentRecord->school_id = $user->school_id;
@@ -1503,8 +1736,9 @@ class SmStudentAdmissionController extends Controller
             $request->validate(
                 [
                     'session' => 'required',
-                    'class' => 'required',
-                    'section' => 'required',
+                    'board_id' => 'nullable|string|max:100',
+                    'class' => 'nullable',
+                    'section' => 'nullable',
                     'file' => 'required',
                 ],
                 [
@@ -1555,8 +1789,71 @@ class SmStudentAdmissionController extends Controller
                 $short_form = $short_form.''.$ch[0];
             }
 
+            $normalizeValue = static fn ($value) => trim((string) $value);
+            $resolveClassIdByBoard = function (string $boardName, string $classValue, int $academicId, int $schoolId) {
+                $query = SmClass::query()
+                    ->where('school_id', $schoolId)
+                    ->where('academic_id', $academicId)
+                    ->where('active_status', 1)
+                    ->where('board_name', $boardName)
+                    ->withoutGlobalScope(StatusAcademicSchoolScope::class);
+
+                if (is_numeric($classValue)) {
+                    return (clone $query)->where('id', (int) $classValue)->value('id');
+                }
+
+                return (clone $query)->whereRaw('LOWER(class_name) = ?', [mb_strtolower($classValue)])->value('id');
+            };
+
+            $resolveSectionIdByClass = function (int $classId, string $sectionValue, int $academicId, int $schoolId) {
+                $query = DB::table('sm_class_sections')
+                    ->join('sm_sections', 'sm_sections.id', '=', 'sm_class_sections.section_id')
+                    ->where('sm_class_sections.class_id', $classId)
+                    ->where('sm_class_sections.academic_id', $academicId)
+                    ->where('sm_class_sections.school_id', $schoolId)
+                    ->where('sm_sections.active_status', 1);
+
+                if (is_numeric($sectionValue)) {
+                    return (clone $query)->where('sm_sections.id', (int) $sectionValue)->value('sm_sections.id');
+                }
+
+                return (clone $query)->whereRaw('LOWER(sm_sections.section_name) = ?', [mb_strtolower($sectionValue)])->value('sm_sections.id');
+            };
+
             if (! empty($data)) {
-                foreach ($data as $value) {
+                foreach ($data as $index => $value) {
+                    $excelRow = $index + 2;
+                    $rowBoardName = $normalizeValue($value->board_name ?: $request->board_id);
+                    $rowClassValue = $normalizeValue($value->class_name ?: $request->class);
+                    $rowSectionValue = $normalizeValue($value->section_name ?: $request->section);
+                    $sessionId = (int) $request->session;
+                    $schoolId = (int) Auth::user()->school_id;
+
+                    if ($rowBoardName === '' || $rowClassValue === '' || $rowSectionValue === '') {
+                        DB::rollback();
+                        StudentBulkTemporary::where('user_id', Auth::user()->id)->delete();
+                        Toastr::error("Row {$excelRow}: board, class and section are required (either in Excel columns or form filters).", 'Failed');
+
+                        return redirect()->back();
+                    }
+
+                    $classId = $resolveClassIdByBoard($rowBoardName, $rowClassValue, $sessionId, $schoolId);
+                    if (! $classId) {
+                        DB::rollback();
+                        StudentBulkTemporary::where('user_id', Auth::user()->id)->delete();
+                        Toastr::error("Row {$excelRow}: class '{$rowClassValue}' is not mapped to board '{$rowBoardName}'.", 'Failed');
+
+                        return redirect()->back();
+                    }
+
+                    $sectionId = $resolveSectionIdByClass($classId, $rowSectionValue, $sessionId, $schoolId);
+                    if (! $sectionId) {
+                        DB::rollback();
+                        StudentBulkTemporary::where('user_id', Auth::user()->id)->delete();
+                        Toastr::error("Row {$excelRow}: section '{$rowSectionValue}' is not mapped to class '{$rowClassValue}'.", 'Failed');
+
+                        return redirect()->back();
+                    }
 
                     if (isSubscriptionEnabled()) {
 
@@ -1591,8 +1888,8 @@ class SmStudentAdmissionController extends Controller
                                     $model = StudentRecord::query();
                                     $studentRecord = universityFilter($model, $request)->first();
                                 } else {
-                                    $studentRecord = StudentRecord::where('class_id', $request->class)
-                                        ->where('section_id', $request->section)
+                                    $studentRecord = StudentRecord::where('class_id', $classId)
+                                        ->where('section_id', $sectionId)
                                         ->where('academic_id', $request->session)
                                         ->where('student_id', $user->student->id)
                                         ->when(shiftEnable() && !empty($request->shift),function($query) use($request){
@@ -1605,7 +1902,10 @@ class SmStudentAdmissionController extends Controller
                                 if (! $studentRecord) {
                                     $this->insertStudentRecord($request->merge([
                                         'student_id' => $user->student->id,
-                                        'roll_number' => $request->roll_no,
+                                        'roll_number' => $value->roll_no,
+                                        'class' => $classId,
+                                        'section' => $sectionId,
+                                        'board_id' => $rowBoardName,
                                     ]));
                                 }
                             }
@@ -1770,6 +2070,11 @@ class SmStudentAdmissionController extends Controller
                                     $student->admission_date = date('Y-m-d', strtotime($value->admission_date));
                                     $student->bloodgroup_id = $value->blood_group;
                                     $student->religion_id = $value->religion;
+                                    if (Schema::hasColumn('sm_students', 'board_name')) {
+                                        $student->board_name = $rowBoardName;
+                                    }
+                                    $student->class_id = $classId;
+                                    $student->section_id = $sectionId;
                                     $student->height = $value->height;
                                     $student->weight = $value->weight;
                                     $student->current_address = $value->current_address;
@@ -1793,6 +2098,9 @@ class SmStudentAdmissionController extends Controller
                                         'student_id' => $student->id,
                                         'is_default' => 1,
                                         'roll_number' => $value->roll_no,
+                                        'class' => $classId,
+                                        'section' => $sectionId,
+                                        'board_id' => $rowBoardName,
                                     ]));
 
                                     $user_info = [];

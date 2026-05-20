@@ -248,6 +248,10 @@
                 <a href="{{route('base_setup')}}">@lang('system_settings.base_setup')</a>
             </li>
         
+            <li>
+                <a href="{{ route('boards') }}">@lang('system_settings.boards')</a>
+            </li>
+
             {{-- <li>
                 <a href="{{url('academic-year')}}">@lang('common.academic_year')</a>
             </li> --}}

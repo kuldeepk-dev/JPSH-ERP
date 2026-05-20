@@ -37,6 +37,8 @@ use JoisarJignesh\Bigbluebutton\Facades\Bigbluebutton;
 use Modules\University\Entities\UnSubjectPreRequisite;
 use Modules\University\Entities\UnSubjectAssignStudent;
 use Modules\OnlineExam\Entities\InfixStudentTakeOnlineExam;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 class StudentRecord extends Model
 {
@@ -56,6 +58,21 @@ class StudentRecord extends Model
     protected $guarded = [
         'id',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::addGlobalScope('selected_board', function (Builder $builder): void {
+            if (app()->runningInConsole() || !filled(selectedBoard())) {
+                return;
+            }
+
+            if (Schema::hasColumn('student_records', 'board_name')) {
+                $builder->where('board_name', selectedBoard());
+            }
+        });
+    }
 
     public static function getInfixStudentTakeOnlineExamParent($student_id, $record_id)
     {

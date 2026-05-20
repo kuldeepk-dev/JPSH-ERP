@@ -22,9 +22,9 @@ class SmAcademicYearRequest extends FormRequest
         return [
             'year' => 'required|numeric|digits:4',
             'copy_with_academic_year' => 'sometimes|nullable|array',
-            'starting_date' => 'required',
-            'ending_date' => 'required',
-            'title' => 'required|max:150',
+            'starting_date' => 'nullable|date',
+            'ending_date' => 'nullable|date',
+            'title' => 'required|numeric|digits:4',
         ];
     }
 }

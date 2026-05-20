@@ -164,6 +164,32 @@
                                                                     <?php endif; ?>
                                                                 </div>
                                                             </div>
+                                                            <div class="col-lg-6 mt-4">
+                                                                <div class="primary_input ">
+                                                                    <label class="primary_input_label" for="admission_board_id">
+                                                                        <?php echo app('translator')->get('common.board'); ?> <span class="text-danger">*</span>
+                                                                    </label>
+                                                                    <select class="primary_select form-control<?php echo e($errors->has('board_id') ? ' is-invalid' : ''); ?>"
+                                                                        name="board_id" id="admission_board_id">
+                                                                        <option data-display="<?php echo app('translator')->get('common.select_board'); ?>" value="">
+                                                                            <?php echo app('translator')->get('common.select_board'); ?>
+                                                                        </option>
+                                                                        <?php $__currentLoopData = generalBoards(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $board): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                                            <option value="<?php echo e($board); ?>"
+                                                                                <?php echo e(old('board_id', selectedBoard()) === $board ? 'selected' : ''); ?>>
+                                                                                <?php echo e($board); ?>
+
+                                                                            </option>
+                                                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                                                    </select>
+                                                                    <?php if($errors->has('board_id')): ?>
+                                                                        <span class="text-danger">
+                                                                            <?php echo e($errors->first('board_id')); ?>
+
+                                                                        </span>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </div>
                                                             <?php echo $__env->make('backEnd.shift.shift_class_section_include', [
                                                                 'div' =>  'col-lg-6',
                                                                 'mt' => 'mt-4',
@@ -272,6 +298,24 @@
                                                                     </div>
                                                                 </div>
                                                             <?php endif; ?>
+
+                                                            <div class="col-lg-6 mt-4">
+                                                                <div class="primary_input ">
+                                                                    <label class="primary_input_label" for="id_number">
+                                                                        <?php echo app('translator')->get('lead::lead.id_number'); ?>
+                                                                    </label>
+                                                                    <input oninput="numberCheck(this)"
+                                                                        class="primary_input_field form-control<?php echo e($errors->has('id_number') ? ' is-invalid' : ''); ?>"
+                                                                        type="text" id="id_number" name="id_number"
+                                                                        value="<?php echo e(old('id_number', old('roll_number'))); ?>">
+                                                                    <?php if($errors->has('id_number')): ?>
+                                                                        <span class="text-danger">
+                                                                            <?php echo e($errors->first('id_number')); ?>
+
+                                                                        </span>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </div>
 
                                                             <?php if(is_show('student_group_id')): ?>
                                                                 <div class="col-lg-6 mt-4">
@@ -2350,6 +2394,125 @@
                 }
             });
 
+            const oldClassId = "<?php echo e(old('class')); ?>";
+            const oldSectionId = "<?php echo e(old('section')); ?>";
+
+            function resetClassDropdown() {
+                $('#common_select_class')
+                    .empty()
+                    .append($('<option>', { value: '', text: window.jsLang('select_class') }))
+                    .prop('disabled', true);
+                $('#common_select_class').niceSelect('update');
+            }
+
+            function resetSectionDropdown() {
+                $('#common_select_section')
+                    .empty()
+                    .append($('<option>', { value: '', text: window.jsLang('select_section') }))
+                    .prop('disabled', true);
+                $('#common_select_section').niceSelect('update');
+            }
+
+            function loadClassesByBoard(boardId, selectedClassId = '', selectedSectionId = '') {
+                const url = $('#url').val() + '/admission/get-classes-by-board/' + encodeURIComponent(boardId);
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { academic_id: $('#academic_year').val() },
+                    url: url,
+                    success: function (classes) {
+                        resetClassDropdown();
+                        resetSectionDropdown();
+                        $('#common_select_class').prop('disabled', false);
+
+                        if (classes.length) {
+                            $.each(classes, function (_, cls) {
+                                $('#common_select_class').append($('<option>', {
+                                    value: cls.id,
+                                    text: cls.class_name
+                                }));
+                            });
+                        }
+
+                        if (selectedClassId) {
+                            $('#common_select_class').val(selectedClassId);
+                        }
+
+                        $('#common_select_class').niceSelect('update');
+                        if (selectedClassId) {
+                            loadSectionsByBoardClass(boardId, selectedClassId, selectedSectionId);
+                        }
+                    },
+                    error: function () {
+                        resetClassDropdown();
+                        resetSectionDropdown();
+                    }
+                });
+            }
+
+            function loadSectionsByBoardClass(boardId, classId, selectedSectionId = '') {
+                const url = $('#url').val() + '/admission/get-sections-by-board-class/' + encodeURIComponent(boardId) + '/' + classId;
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { academic_id: $('#academic_year').val() },
+                    url: url,
+                    success: function (sections) {
+                        resetSectionDropdown();
+                        $('#common_select_section').prop('disabled', false);
+
+                        if (sections.length) {
+                            $.each(sections, function (_, section) {
+                                $('#common_select_section').append($('<option>', {
+                                    value: section.id,
+                                    text: section.section_name
+                                }));
+                            });
+                        }
+
+                        if (selectedSectionId) {
+                            $('#common_select_section').val(selectedSectionId);
+                        }
+                        $('#common_select_section').niceSelect('update');
+                    },
+                    error: function () {
+                        resetSectionDropdown();
+                    }
+                });
+            }
+
+            $(document).off('change', '#common_select_class');
+
+            $(document).on('change', '#admission_board_id', function() {
+                const boardId = $(this).val();
+                resetClassDropdown();
+                resetSectionDropdown();
+
+                if (!boardId) {
+                    return;
+                }
+                loadClassesByBoard(boardId);
+            });
+
+            $(document).on('change', '#common_select_class', function() {
+                const boardId = $('#admission_board_id').val();
+                const classId = $(this).val();
+                resetSectionDropdown();
+
+                if (!boardId || !classId) {
+                    return;
+                }
+                loadSectionsByBoardClass(boardId, classId);
+            });
+
+            resetClassDropdown();
+            resetSectionDropdown();
+
+            const initialBoardId = $('#admission_board_id').val();
+            if (initialBoardId) {
+                loadClassesByBoard(initialBoardId, oldClassId, oldSectionId);
+            }
+
         })
         $(document).on('change', '#addStudentImage', function(event) {
             $('#studentImageShow').removeClass('d-none');
@@ -2373,4 +2536,5 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('backEnd.master', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/studentInformation/student_admission.blade.php ENDPATH**/ ?>

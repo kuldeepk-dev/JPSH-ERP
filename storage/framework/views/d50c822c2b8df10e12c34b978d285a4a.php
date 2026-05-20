@@ -202,6 +202,22 @@
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6">
                                             <div class="name">
+                                                Boards
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="value text-left">
+                                                <?php echo e(implode(', ', generalBoards())); ?>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="single-meta">
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="name">
                                                 <?php echo app('translator')->get('common.address'); ?>
                                             </div>
                                         </div>

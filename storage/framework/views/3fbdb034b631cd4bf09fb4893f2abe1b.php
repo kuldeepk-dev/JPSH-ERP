@@ -12,7 +12,6 @@
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/jszip.min.js"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/pdfmake.min.js"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/vfs_fonts.js"></script>
-<script src="<?php echo e(asset('public/backEnd/js/vfs_fonts.js')); ?>"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/buttons.html5.min.js"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/buttons.print.min.js"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/vendors/js/dataTables.rowReorder.min.js"></script>
@@ -337,4 +336,5 @@ if ($("#table_id, .school-table-data").length) {
          }
      };
 </script>
-<?php $__env->stopPush(); ?> <?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/partials/data_table_js.blade.php ENDPATH**/ ?>
+<?php $__env->stopPush(); ?> 
+<?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/partials/data_table_js.blade.php ENDPATH**/ ?>

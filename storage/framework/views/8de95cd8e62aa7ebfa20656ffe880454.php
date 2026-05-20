@@ -33,8 +33,8 @@
 <script type="text/javascript">
     // Initialize the service worker
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('<?php echo e(url('/')); ?>'+'/serviceworker.js', {
-            scope: '<?php echo e(url('/')); ?>'+'/serviceworker.js'
+        navigator.serviceWorker.register('<?php echo e(url('/')); ?>/serviceworker.js', {
+            scope: '<?php echo e(url('/')); ?>/'
         }).then(function (registration) {
             // Registration was successful
             console.log('Laravel PWA: ServiceWorker registration successful with scope: ', registration.scope);
@@ -43,4 +43,5 @@
             console.log('Laravel PWA: ServiceWorker registration failed: ', err);
         });
     }
-</script><?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/vendor/laravelpwa/meta.blade.php ENDPATH**/ ?>
+</script>
+<?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/vendor/laravelpwa/meta.blade.php ENDPATH**/ ?>

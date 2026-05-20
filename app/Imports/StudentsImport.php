@@ -3,10 +3,13 @@
 namespace App\Imports;
 
 use App\StudentBulkTemporary;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithStartRow;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class StudentsImport implements ToModel, WithHeadingRow, WithStartRow
 {
@@ -15,31 +18,18 @@ class StudentsImport implements ToModel, WithHeadingRow, WithStartRow
      */
     public function model(array $row)
     {
-
-        $dob = null;
-        $admission_date = date('Y-m-d');
-
-        if (gv($row, 'date_of_birth')) {
-
-            $dob = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row['date_of_birth'])->format('Y-m-d');
-        }
-
-        if (gv($row, 'admission_date')) {
-            $admission_date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row['admission_date'])->format('Y-m-d');
-        }
-
-        return new StudentBulkTemporary([
+        $attributes = [
             'admission_number' => (string) @$row['admission_number'],
             'roll_no' => (string) @$row['roll_no'],
             'first_name' => @$row['first_name'],
             'last_name' => @$row['last_name'],
-            'date_of_birth' => $dob,
+            'date_of_birth' => $this->normalizeDateValue($row['date_of_birth'] ?? null),
             'religion' => @$row['religion'],
             'gender' => @$row['gender'],
             'caste' => @$row['caste'],
             'mobile' => (string) @$row['mobile'],
             'email' => @$row['email'],
-            'admission_date' => $admission_date,
+            'admission_date' => $this->normalizeDateValue($row['admission_date'] ?? null) ?: date('Y-m-d'),
             'blood_group' => @$row['blood_group'],
             'height' => @$row['height'],
             'weight' => @$row['weight'],
@@ -64,7 +54,19 @@ class StudentsImport implements ToModel, WithHeadingRow, WithStartRow
             'previous_school_details' => (string) @$row['previous_school_details'],
             'note' => @$row['note'],
             'user_id' => Auth::user()->id,
-        ]);
+        ];
+
+        if (Schema::hasColumn('student_bulk_temporaries', 'board_name')) {
+            $attributes['board_name'] = trim((string) (@$row['board'] ?? @$row['board_name'] ?? '')) ?: null;
+        }
+        if (Schema::hasColumn('student_bulk_temporaries', 'class_name')) {
+            $attributes['class_name'] = trim((string) (@$row['class'] ?? @$row['class_name'] ?? '')) ?: null;
+        }
+        if (Schema::hasColumn('student_bulk_temporaries', 'section_name')) {
+            $attributes['section_name'] = trim((string) (@$row['section'] ?? @$row['section_name'] ?? '')) ?: null;
+        }
+
+        return new StudentBulkTemporary($attributes);
 
     }
 
@@ -76,5 +78,22 @@ class StudentsImport implements ToModel, WithHeadingRow, WithStartRow
     public function headingRow(): int
     {
         return 1;
+    }
+
+    private function normalizeDateValue($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
+        }
+
+        try {
+            return Carbon::parse((string) $value)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

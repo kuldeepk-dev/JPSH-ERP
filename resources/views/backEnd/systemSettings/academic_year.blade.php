@@ -60,48 +60,57 @@
                                     </h3>
                                 </div>
                                 <div class="add-visitor">
+                                    @php
+                                        $yearOptions = range(1990, 2200);
+                                        $selectedYear = isset($academic_year) ? (int) $academic_year->year : (int) old('year');
+                                        $selectedTitle = isset($academic_year) ? (int) $academic_year->title : (int) old('title');
+                                    @endphp
                                     <div class="row">
-                                        <div class="col-lg-12">
-
+                                        <div class="col-5">
                                             <div class="primary_input">
-                                                <label class="primary_input_label" for="">@lang('common.year')
+                                                <label class="primary_input_label" for="year">@lang('common.year')
                                                     <span class="text-danger"> *</span></label>
-                                                <input
-                                                    class="primary_input_field form-control{{ $errors->has('year') ? ' is-invalid' : '' }}"
-                                                    type="text" name="year" autocomplete="off"
-                                                    value="{{ isset($academic_year) ? @$academic_year->year : '' }}">
+                                                <select id="year" name="year"
+                                                    class="primary_input_field form-control{{ $errors->has('year') ? ' is-invalid' : '' }}">
+                                                    <option value="">@lang('common.select')</option>
+                                                    @foreach ($yearOptions as $yearOption)
+                                                        <option value="{{ $yearOption }}" @if ($yearOption === $selectedYear) selected @endif>
+                                                            {{ $yearOption }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
                                                 <input type="hidden" name="id"
                                                     value="{{ isset($academic_year) ? @$academic_year->id : '' }}">
-
-
                                                 @if ($errors->has('year'))
-                                                    <span class="text-danger">
-                                                        {{ $errors->first('year') }}</span>
+                                                    <span class="text-danger">{{ $errors->first('year') }}</span>
                                                 @endif
                                             </div>
-
                                         </div>
-                                    </div>
-
-                                    <div class="row mt-15">
-                                        <div class="col-lg-12">
+                                        <div class="col-2 d-flex align-items-end justify-content-center">
+                                            <div class="primary_input_label mb-2">TO</div>
+                                        </div>
+                                        <div class="col-5">
                                             <div class="primary_input">
-                                                <label> @lang('system_settings.year_title')<span class="text-danger"> *</span></label>
-                                                <input
-                                                    class="primary_input_field form-control{{ $errors->has('title') ? ' is-invalid' : '' }}"
-                                                    type="text" name="title" autocomplete="off"
-                                                    value="{{ isset($academic_year) ? @$academic_year->title : old('academic_year') }}">
+                                                <label class="primary_input_label" for="title">@lang('common.year')
+                                                    <span class="text-danger"> *</span></label>
+                                                <select id="title" name="title"
+                                                    class="primary_input_field form-control{{ $errors->has('title') ? ' is-invalid' : '' }}">
+                                                    <option value="">@lang('common.select')</option>
+                                                    @foreach ($yearOptions as $yearOption)
+                                                        <option value="{{ $yearOption }}" @if ($yearOption === $selectedTitle) selected @endif>
+                                                            {{ $yearOption }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
                                                 <input type="hidden" name="id"
                                                     value="{{ isset($academic_year) ? @$academic_year->id : '' }}">
-
-
                                                 @if ($errors->has('title'))
-                                                    <span class="text-danger">
-                                                        {{ $errors->first('title') }}</span>
+                                                    <span class="text-danger">{{ $errors->first('title') }}</span>
                                                 @endif
                                             </div>
                                         </div>
                                     </div>
+                                    {{--
                                     <div class="row mt-15">
                                         <div class="col-lg-12">
                                             <div class="primary_input">
@@ -157,6 +166,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    --}}
                                     @php
                                         if (isset($academic_year)) {
                                             $copy_with_academic_year = explode(',', @$academic_year->copy_with_academic_year);
@@ -243,9 +253,9 @@
                                         <thead>
                                             <tr>
                                                 <th>@lang('common.year')</th>
-                                                <th>@lang('common.title')</th>
-                                                <th>@lang('system_settings.starting_date')</th>
-                                                <th>@lang('system_settings.ending_date')</th>
+                                                <th>@lang('common.year')</th>
+                                                <!-- <th>@lang('system_settings.starting_date')</th>
+                                                <th>@lang('system_settings.ending_date')</th> -->
                                                 <th>@lang('common.action')</th>
                                             </tr>
                                         </thead>
@@ -254,14 +264,14 @@
                                                 <tr>
                                                     <td>{{ @$academic_year->year }}</td>
                                                     <td>{{ @$academic_year->title }}</td>
-                                                    <td data-sort="{{ strtotime(@$academic_year->starting_date) }}">
+                                                    <!-- <td data-sort="{{ strtotime(@$academic_year->starting_date) }}">
                                                         {{ @$academic_year->starting_date != '' ? dateConvert(@$academic_year->starting_date) : '' }}
     
                                                     </td>
                                                     <td data-sort="{{ strtotime(@$academic_year->ending_date) }}">
                                                         {{ @$academic_year->ending_date != '' ? dateConvert(@$academic_year->ending_date) : '' }}
     
-                                                    </td>
+                                                    </td> -->
                                                     <td>
                                                         <x-drop-down>
                                                             @if (userPermission('academic-year-edit'))

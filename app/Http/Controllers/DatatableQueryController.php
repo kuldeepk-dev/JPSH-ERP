@@ -58,6 +58,7 @@ class DatatableQueryController extends Controller
             $name = $request->name;
             $roll_no = $request->roll_no;
             $section_id = $request->section_id;
+            $board_id = $request->board_id;
             $data['un_session_id'] = $request->un_session_id;
             $data['un_academic_id'] = $request->un_academic_id;
             $data['un_faculty_id'] = $request->un_faculty_id;
@@ -66,7 +67,7 @@ class DatatableQueryController extends Controller
             $data['un_semester_label_id'] = $request->un_semester_label_id;
             $data['un_section_id'] = $request->un_section_id;
             
-            return view('backEnd.studentInformation.student_details', ['classes' => $classes, 'class_id' => $class_id, 'name' => $name, 'roll_no' => $roll_no, 'sessions' => $sessions, 'section_id' => $section_id, 'academic_year' => $academic_year, 'data' => $data, 'shift_id' => $shift_id]);
+            return view('backEnd.studentInformation.student_details', ['classes' => $classes, 'class_id' => $class_id, 'name' => $name, 'roll_no' => $roll_no, 'sessions' => $sessions, 'section_id' => $section_id, 'academic_year' => $academic_year, 'data' => $data, 'shift_id' => $shift_id, 'board_id' => $board_id]);
         }
 
         if ($request->ajax()) {
@@ -99,6 +100,8 @@ class DatatableQueryController extends Controller
                     $query->where('section_id', $request->section);
                 })->when($request->shift_id, function ($query) use ($request) {
                     $query->where('shift_id', $request->shift_id);
+                })->when($request->board_id, function ($query) use ($request): void {
+                    $query->where('board_name', $request->board_id);
                 })->when($request->class, function ($query) use ($request): void {
                     $query->where('class_id', $request->class);
                 });
@@ -125,6 +128,8 @@ class DatatableQueryController extends Controller
                 }])
                 ->when($request->name, function ($query) use ($request): void {
                     $query->where('full_name', 'like', '%' . $request->name . '%');
+                })->when($request->board_id, function ($query) use ($request): void {
+                    $query->where('board_name', $request->board_id);
                 });
 
             if (!generalSetting()->multiple_roll && $roll_no) {
@@ -214,6 +219,9 @@ class DatatableQueryController extends Controller
             ->when($request->section, function ($query) use ($request): void {
                 $query->where('section_id', $request->section);
             })
+            ->when($request->board_id, function ($query) use ($request): void {
+                $query->where('board_name', $request->board_id);
+            })
             ->when(!$request->academic_year, function ($query): void {
                 $query->where('academic_id', getAcademicId());
             })
@@ -228,6 +236,9 @@ class DatatableQueryController extends Controller
 
         if ($request->roll_no != '') {
             $students->where('roll_no', 'like', '%' . $request->roll_no . '%');
+        }
+        if ($request->board_id != '') {
+            $students->where('board_name', $request->board_id);
         }
 
         $students = $students->whereIn('id', $student_ids)->where('school_id', Auth::user()->school_id)

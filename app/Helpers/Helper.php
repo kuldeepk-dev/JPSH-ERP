@@ -565,6 +565,23 @@ if (! function_exists('getAcademicId')) {
 if (! function_exists('generalBoards')) {
     function generalBoards(): array
     {
+        if (Schema::hasTable('sm_boards')) {
+            $schoolId = Auth::check()
+                ? Auth::user()->school_id
+                : (app()->bound('school') ? app('school')->id : 1);
+
+            $boardNames = DB::table('sm_boards')
+                ->where('school_id', $schoolId)
+                ->where('active_status', 1)
+                ->orderBy('name')
+                ->pluck('name')
+                ->toArray();
+
+            if (! empty($boardNames)) {
+                return $boardNames;
+            }
+        }
+
         $boards = generalSetting()->boards ?? null;
 
         if (empty($boards)) {
@@ -593,6 +610,31 @@ if (! function_exists('selectedBoard')) {
         $board = session()->get('selectedBoard');
 
         return filled($board) ? $board : null;
+    }
+}
+
+if (! function_exists('isAllBoardsContext')) {
+    function isAllBoardsContext(): bool
+    {
+        return !filled(selectedBoard());
+    }
+}
+
+if (! function_exists('canShowBoardFilter')) {
+    function canShowBoardFilter(): bool
+    {
+        return isAllBoardsContext();
+    }
+}
+
+if (! function_exists('boardsForFilter')) {
+    function boardsForFilter(): array
+    {
+        if (isAllBoardsContext()) {
+            return generalBoards();
+        }
+
+        return array_values(array_filter([selectedBoard()]));
     }
 }
 

@@ -1066,6 +1066,13 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
         // Student Module /Student Admission
         Route::get('student-admission', ['as' => 'student_admission', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@index'])->middleware('userRolePermission:student_admission');
+        Route::post('student-admission-draft', ['as' => 'student_admission_draft', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@saveDraft'])->middleware('userRolePermission:student_admission');
+        Route::get('student-admission-applications', ['as' => 'student_admission_applications', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applications'])->middleware('userRolePermission:student_admission');
+        Route::get('student-admission-applications/{id}', ['as' => 'student_admission_application_show', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationShow'])->middleware('userRolePermission:student_admission');
+        Route::post('student-admission-applications/{id}/status', ['as' => 'student_admission_application_status', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationStatus'])->middleware('userRolePermission:student_admission');
+        Route::get('student-admission-applications/{id}/pdf', ['as' => 'student_admission_application_pdf', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationPdf'])->middleware('userRolePermission:student_admission');
+        Route::get('admission/get-classes-by-board/{board_id}', ['as' => 'admission.get-classes-by-board', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@getClassesByBoard'])->middleware('userRolePermission:student_admission');
+        Route::get('admission/get-sections-by-board-class/{board_id}/{class_id}', ['as' => 'admission.get-sections-by-board-class', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@getSectionsByBoardClass'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-check/{id}', ['as' => 'student_admission_check', 'uses' => 'SmStudentAdmissionController@admissionCheck']);
         Route::get('student-admission-update-check/{val}/{id}', ['as' => 'student_admission_check_update', 'uses' => 'SmStudentAdmissionController@admissionCheckUpdate']);
         Route::post('student-admission-pic', ['as' => 'student_admission_pic', 'uses' => 'SmStudentAdmissionController@admissionPic']);
@@ -1699,6 +1706,11 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('update-general-settings', 'Admin\SystemSettings\SmSystemSettingController@updateGeneralSettings')->name('update-general-settings')->middleware('userRolePermission:update-general-settings');
         Route::post('update-general-settings-data', 'Admin\SystemSettings\SmSystemSettingController@updateGeneralSettingsData')->name('update-general-settings-data')->middleware('userRolePermission:update-general-settings-data');
         Route::post('update-school-logo', 'Admin\SystemSettings\SmSystemSettingController@updateSchoolLogo')->name('update-school-logo')->middleware('userRolePermission:update-school-logo');
+        Route::get('boards', 'Admin\SystemSettings\SmBoardController@index')->name('boards')->middleware('userRolePermission:general-settings');
+        Route::post('boards', 'Admin\SystemSettings\SmBoardController@store')->name('boards-store')->middleware('userRolePermission:general-settings');
+        Route::get('boards/{id}', 'Admin\SystemSettings\SmBoardController@show')->name('boards-edit')->middleware('userRolePermission:general-settings');
+        Route::put('boards/{id}', 'Admin\SystemSettings\SmBoardController@update')->name('boards-update')->middleware('userRolePermission:general-settings');
+        Route::delete('boards/{id}', 'Admin\SystemSettings\SmBoardController@destroy')->name('boards-delete')->middleware('userRolePermission:general-settings');
 
         // Custom Field Start
         Route::get('student-registration-custom-field', 'SmCustomFieldController@index')->name('student-reg-custom-field')->middleware('userRolePermission:student-reg-custom-field');

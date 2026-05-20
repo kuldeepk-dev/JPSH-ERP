@@ -30,7 +30,20 @@ class SmAssignClassTeacherController extends Controller
             $teachers = SmStaff::status()->where(function ($q): void {
                 $q->where('role_id', 4)->orWhere('previous_role_id', 4);
             })->get();
-            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')->where('academic_id', getAcademicId())->status()->orderBy('class_id', 'ASC')->orderBy('section_id', 'ASC')->get();
+
+            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')
+                ->where('academic_id', getAcademicId())
+                ->status()
+                ->orderBy('class_id', 'ASC')
+                ->orderBy('section_id', 'ASC');
+
+            if (filled(selectedBoard())) {
+                $assign_class_teachers = $assign_class_teachers->whereHas('class', function ($query): void {
+                    $query->where('board_name', selectedBoard());
+                });
+            }
+
+            $assign_class_teachers = $assign_class_teachers->get();
 
             return view('backEnd.academics.assign_class_teacher', ['classes' => $classes, 'teachers' => $teachers, 'assign_class_teachers' => $assign_class_teachers]);
         /*
@@ -125,7 +138,19 @@ class SmAssignClassTeacherController extends Controller
             $teachers = SmStaff::status()->where(function ($q): void {
                 $q->where('role_id', 4)->orWhere('previous_role_id', 4);
             })->get();
-            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')->where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+
+            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')
+                ->where('active_status', 1)
+                ->where('academic_id', getAcademicId())
+                ->where('school_id', Auth::user()->school_id);
+
+            if (filled(selectedBoard())) {
+                $assign_class_teachers = $assign_class_teachers->whereHas('class', function ($query): void {
+                    $query->where('board_name', selectedBoard());
+                });
+            }
+
+            $assign_class_teachers = $assign_class_teachers->get();
             $assign_class_teacher = SmAssignClassTeacher::find($id);
             $sections = SmSection::get();
 

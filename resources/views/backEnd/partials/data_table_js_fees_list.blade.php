@@ -12,7 +12,6 @@
 <script src="{{asset('public/backEnd/')}}/vendors/js/jszip.min.js"></script>
 <script src="{{asset('public/backEnd/')}}/vendors/js/pdfmake.min.js"></script>
 <script src="{{asset('public/backEnd/')}}/vendors/js/vfs_fonts.js"></script>
-<script src="{{asset('public/backEnd/js/vfs_fonts.js')}}"></script>
 <script src="{{asset('public/backEnd/')}}/vendors/js/buttons.html5.min.js"></script>
 <script src="{{asset('public/backEnd/')}}/vendors/js/buttons.print.min.js"></script>
 <script src="{{asset('public/backEnd/')}}/vendors/js/dataTables.rowReorder.min.js"></script>

@@ -99,6 +99,26 @@
                                         'section_id' => @$section_id,
                                     ],
                                 ])
+                                @if (canShowBoardFilter())
+                                <div class="col-lg-4 col-md-6 global_board_filter_wrap">
+                                    <div class="primary_input sm_mb_20">
+                                        <label class="primary_input_label" for="student_list_board_id">@lang('common.board')</label>
+                                        <select class="primary_select form-control" name="board_id" id="student_list_board_id">
+                                            <option data-display="@lang('common.select_board')" value="">
+                                                @lang('common.select_board')
+                                            </option>
+                                            @foreach (boardsForFilter() as $board)
+                                                <option value="{{ $board }}"
+                                                    {{ (isset($board_id) ? $board_id : old('board_id')) === $board ? 'selected' : '' }}>
+                                                    {{ $board }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                @else
+                                    <input type="hidden" name="board_id" value="{{ selectedBoard() }}">
+                                @endif
                                 <div class="col-lg-4 col-md-6">
                                     <div class="primary_input sm_mb_20 ">
                                         <label class="primary_input_label" for="">@lang('student.search_by_name')</label>
@@ -134,6 +154,7 @@
             <input type="hidden" id="shift_id" value="{{ @$shift_id }}">
             <input type="hidden" id="roll" value="{{ @$roll_no }}">
             <input type="hidden" id="name" value="{{ @$name }}">
+            <input type="hidden" id="board_id" value="{{ @$board_id }}">
             <input type="hidden" id="un_session" value="{{ @$data['un_session_id'] }}">
             <input type="hidden" id="un_academic" value="{{ @$data['un_academic_id'] }}">
             <input type="hidden" id="un_faculty" value="{{ @$data['un_faculty_id'] }}">
@@ -260,6 +281,7 @@
                         shift_id: $('#shift_id').val(),
                         roll_no: $('#roll').val(),
                         name: $('#name').val(),
+                        board_id: $('#board_id').val(),
                         un_session_id: $('#un_session').val(),
                         un_academic_id: $('#un_academic').val(),
                         un_faculty_id: $('#un_faculty').val(),

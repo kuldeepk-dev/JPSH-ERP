@@ -316,30 +316,30 @@
             console.log(formData);
             $.ajax({
                 type: "GET",
-
-                $(document).ready(function () {
-                    $("#boardChange, #boardChange_mbl").on("change", function () {
-                        var url = $("#url").val();
-                        var formData = {
-                            id: $(this).val(),
-                        };
-                        $.ajax({
-                            type: "GET",
-                            data: formData,
-                            dataType: "json",
-                            url: url + "/" + "change-board",
-                            success: function (data) {
-                                location.reload();
-                            },
-                        });
-                    });
-                });
                 data: formData,
                 dataType: "json",
                 url: url + "/" + "change-academic-year",
                 success: function (data) {
                     location.reload();
                     console.log(data);
+                },
+            });
+        });
+    });
+
+    $(document).ready(function () {
+        $("#boardChange, #boardChange_mbl").on("change", function () {
+            var url = $("#url").val();
+            var formData = {
+                id: $(this).val(),
+            };
+            $.ajax({
+                type: "GET",
+                data: formData,
+                dataType: "json",
+                url: url + "/" + "change-board",
+                success: function (data) {
+                    location.reload();
                 },
             });
         });
@@ -632,11 +632,17 @@
         fileInput.addEventListener("change", showFileName);
 
         function showFileName(event) {
-            var fileInput = event.srcElement;
-            var fileName = fileInput.files[0].name;
-            document.getElementById(
-                "placeholderUploadContent"
-            ).placeholder = fileName;
+            var inputElement = event.target || event.srcElement;
+            if (!inputElement || !inputElement.files || !inputElement.files.length) {
+                return;
+            }
+            var fileName = inputElement.files[0].name;
+            var placeholder =
+                document.getElementById("placeholderUploadContent") ||
+                document.getElementById("placeholderPhoto");
+            if (placeholder) {
+                placeholder.placeholder = fileName;
+            }
         }
     }
 
@@ -2305,7 +2311,7 @@
 
 $("#e1").on("select2:opening select2:closing", function (event) {
     var $searchfield = $(this).parent().find(".select2-search__field");
-    $searchfield.prop("disabled", true); s
+    $searchfield.prop("disabled", true);
 });
 
 // $("#e1").select2();

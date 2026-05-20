@@ -121,7 +121,7 @@
                             @else
                                 <option value="{{ @$academic_year->id }}"
                                     {{ getAcademicId() == @$academic_year->id ? 'selected' : '' }}>
-                                    {{ @$academic_year->year }} [{{ @$academic_year->title }}]
+                                    {{ @$academic_year->year }} - {{ @$academic_year->title }}
                                 </option>
                             @endif
                         @endforeach
@@ -541,6 +541,11 @@
 @endif
 
 <script>
+    window.erpBoardContext = {
+        selectedBoard: @json(selectedBoard()),
+        isAllBoardsContext: @json(isAllBoardsContext()),
+    };
+
     var position = '{{ $position }}';
     var tawkposition = '';
 
@@ -572,6 +577,33 @@
 	};
 
     $(document).ready(function () {
+        if (!window.erpBoardContext.isAllBoardsContext) {
+            const selectedBoard = window.erpBoardContext.selectedBoard;
+
+            $('select[name="board_id"], select[name="board_name"]').each(function () {
+                const $select = $(this);
+
+                $select.find('option').each(function () {
+                    const value = $(this).val();
+                    if (value === '' || value !== selectedBoard) {
+                        $(this).remove();
+                    }
+                });
+
+                if (selectedBoard) {
+                    if (!$select.find('option[value="' + selectedBoard + '"]').length) {
+                        $select.append($('<option>', { value: selectedBoard, text: selectedBoard }));
+                    }
+                    $select.val(selectedBoard);
+                }
+
+                if ($select.hasClass('nice_Select') || $select.hasClass('primary_select')) {
+                    $select.niceSelect('update');
+                }
+            });
+
+            $('.global_board_filter_wrap').hide();
+        }
 
         $('#infix_session_mbl').on('change', function () {
             const selectedSession = $(this).val();

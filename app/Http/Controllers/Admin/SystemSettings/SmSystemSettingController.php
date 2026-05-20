@@ -1197,8 +1197,10 @@ class SmSystemSettingController extends Controller
             $generalSettData->blog_search  = $request->blog_search;
             $generalSettData->recent_blog  = $request->recent_blog;
             $generalSettData->role_based_sidebar  = $request->role_based_sidebar;
-            $boards = array_values(array_filter(array_map('trim', preg_split('/[,\n]+/', (string) $request->boards))));
-            $generalSettData->boards  = json_encode($boards);
+            if ($request->has('boards')) {
+                $boards = array_values(array_filter(array_map('trim', preg_split('/[,\n]+/', (string) $request->boards))));
+                $generalSettData->boards = json_encode($boards);
+            }
             $results = $generalSettData->save();
 
             

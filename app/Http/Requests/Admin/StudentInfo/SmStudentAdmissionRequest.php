@@ -24,6 +24,15 @@ class SmStudentAdmissionRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (!$this->filled('roll_number') && $this->filled('id_number')) {
+            $this->merge([
+                'roll_number' => $this->id_number,
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      */
@@ -79,6 +88,8 @@ class SmStudentAdmissionRequest extends FormRequest
             // })],
 
             'admission_number' => ['integer'],
+            'board_id' => ['required', 'string', 'max:100'],
+            'id_number' => ['nullable', 'integer'],
 
             'first_name' => ['max:100', Rule::requiredIf(function () use ($field): bool {
                 return in_array('first_name', $field);
@@ -196,6 +207,14 @@ class SmStudentAdmissionRequest extends FormRequest
                     return in_array('document_file_1', $field);
                 }),
                 'nullable', 'max:'.$maxFileSize, ],
+            'aadhaar_number' => ['nullable', 'regex:/^[0-9]{12}$/'],
+            'document_birth_certificate' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_transfer_certificate' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_passport_photos' => ['required'],
+            'document_passport_photos.*' => ['mimes:jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_report_card' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_category_certificate' => ['nullable', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_aadhaar' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
             'document_file_2' => [
                 Rule::requiredIf(function () use ($field): bool {
                     return in_array('document_file_2', $field);
@@ -252,15 +271,11 @@ class SmStudentAdmissionRequest extends FormRequest
             }
 
             if ($request->has('class')) {
-                $rules['class'] = [Rule::requiredIf(function () use ($field): bool {
-                    return in_array('class', $field);
-                })];
+                $rules['class'] = ['required'];
             }
 
             if ($request->has('section')) {
-                $rules['section'] = [Rule::requiredIf(function () use ($field): bool {
-                    return in_array('section', $field);
-                })];
+                $rules['section'] = ['required'];
             }
         }
 
@@ -338,6 +353,7 @@ class SmStudentAdmissionRequest extends FormRequest
 
         $attributes = [
             'session' => 'Academic',
+            'board_id' => 'Board',
         ];
         if (moduleStatusCheck('Lead') == true) {
             $attributes['roll_number'] = 'ID Number';

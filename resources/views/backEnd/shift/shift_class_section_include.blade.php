@@ -123,7 +123,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                 {{ __('common.select_class') }} {{ in_array('class', $required) ? '*' : '' }}</option>
             @if (isset($classes))
             @foreach ($classes as $class)
-            <option value="{{ $class->id }}" {{ isset($class_id) ? ($class_id == $class->id ? 'selected' : '') : '' }}>
+            <option value="{{ $class->id }}" data-board-name="{{ $class->board_name ?? '' }}" {{ isset($class_id) ? ($class_id == $class->id ? 'selected' : '') : '' }}>
                 {{ $class->class_name }}</option>
             @endforeach
             @endif
@@ -343,6 +343,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                                 $("<option>", {
                                     value: className.id,
                                     text: className.class_name,
+                                    "data-board-name": className.board_name ? className.board_name : "",
                                 })
                             );
                         });
@@ -393,6 +394,7 @@ $subject_name = isset($subject_name) ? $subject_name : 'subject_id';
                                 $("<option>", {
                                     value: className.id,
                                     text: className.name,
+                                    "data-board-name": className.board_name ? className.board_name : "",
                                 })
                             );
                         });

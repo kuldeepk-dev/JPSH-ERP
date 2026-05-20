@@ -100,15 +100,7 @@
                             <div class="col-lg-4">
                                 <div class="primary_input">
                                     <label class="primary_input_label" for="boards">Boards</label>
-                                    <textarea class="primary_input_field form-control{{ $errors->has('boards') ? ' is-invalid' : '' }}"
-                                        name="boards" id="boards" rows="3"
-                                        placeholder="CBSE, IB, ICSE">{{ old('boards', implode(', ', generalBoards())) }}</textarea>
-                                    <small class="text-muted">Enter boards separated by commas.</small>
-                                    @if ($errors->has('boards'))
-                                    <span class="text-danger">
-                                        {{ $errors->first('boards') }}
-                                    </span>
-                                    @endif
+                                    <small class="text-muted d-block">{{ implode(', ', generalBoards()) }}</small>
                                 </div>
                             </div>
                         </div>

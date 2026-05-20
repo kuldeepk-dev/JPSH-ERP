@@ -83,6 +83,8 @@
                                             8. For relation with guardian (F=Father, M=Mother, O=Other)<br>
                                             9. Please follow this date format(2020-06-15) for Date of birth & Admission
                                             date<br>
+                                            10. For mixed import, add Excel columns: <b>board</b>, <b>class</b>,
+                                            <b>section</b> (value can be ID or exact name).<br>
                                             <hr>
                                         </div>
                                     </div>
@@ -147,14 +149,36 @@
                                             @endif
                                         </div>
                                     </div>
+                                    <div class="col-lg-3">
+                                        <div class="primary_input ">
+                                            <select
+                                                class="primary_select form-control{{ $errors->has('board_id') ? ' is-invalid' : '' }}"
+                                                name="board_id" id="import_board_id">
+                                                <option data-display="@lang('common.select_board')" value="">
+                                                    @lang('common.select_board')</option>
+                                                @foreach (generalBoards() as $board)
+                                                    <option value="{{ $board }}"
+                                                        {{ old('board_id', selectedBoard()) === $board ? 'selected' : '' }}>
+                                                        {{ $board }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+
+                                            @if ($errors->has('board_id'))
+                                                <span class="text-danger invalid-select" role="alert">
+                                                    {{ $errors->first('board_id') }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
 
                                     <div class="col-lg-3">
                                         <div class="primary_input" id="class-div">
                                             <select
                                                 class="primary_select  form-control{{ $errors->has('class') ? ' is-invalid' : '' }}"
                                                 name="class" id="classSelectStudent">
-                                                <option data-display="@lang('common.class') *" value="">
-                                                    @lang('common.class') *</option>
+                                                <option data-display="@lang('common.class')" value="">
+                                                    @lang('common.class')</option>
                                             </select>
                                             <div class="pull-right loader loader_style" id="select_class_loader">
                                                 <img class="loader_img_style"
@@ -173,8 +197,8 @@
                                             <select
                                                 class="primary_select  form-control{{ $errors->has('section') ? ' is-invalid' : '' }}"
                                                 name="section" id="sectionSelectStudent">
-                                                <option data-display="@lang('common.section') *" value="">
-                                                    @lang('common.section') *</option>
+                                                <option data-display="@lang('common.section')" value="">
+                                                    @lang('common.section')</option>
                                             </select>
                                             <div class="pull-right loader loader_style" id="select_section_loader">
                                                 <img class="loader_img_style"
@@ -233,3 +257,196 @@
         </div>
     </section>
 @endsection
+
+@push('script')
+    <script>
+        (function($) {
+            "use strict";
+
+            const oldClassId = "{{ old('class') }}";
+            const oldSectionId = "{{ old('section') }}";
+            const bulkDebugPrefix = "[BulkImport]";
+            const logBulk = function(message, payload) {
+                if (typeof payload === 'undefined') {
+                    console.log(bulkDebugPrefix, message);
+                    return;
+                }
+                console.log(bulkDebugPrefix, message, payload);
+            };
+
+            function resetClassDropdown() {
+                $('#classSelectStudent')
+                    .empty()
+                    .append($('<option>', {
+                        value: '',
+                        text: "{{ __('student.select_class') }}"
+                    }))
+                    .prop('disabled', true);
+                $('#classSelectStudent').niceSelect('update');
+            }
+
+            function resetSectionDropdown() {
+                $('#sectionSelectStudent')
+                    .empty()
+                    .append($('<option>', {
+                        value: '',
+                        text: "{{ __('student.select_section') }}"
+                    }))
+                    .prop('disabled', true);
+                $('#sectionSelectStudent').niceSelect('update');
+            }
+
+            function loadClassesByBoard(boardId, selectedClassId = '', selectedSectionId = '') {
+                const baseUrl = $('#url').val();
+                logBulk("Loading classes", {
+                    board_id: boardId,
+                    academic_id: $('#academic_year').val()
+                });
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        academic_id: $('#academic_year').val()
+                    },
+                    url: baseUrl + '/admission/get-classes-by-board/' + encodeURIComponent(boardId),
+                    success: function(classes) {
+                        logBulk("Classes loaded", classes);
+                        resetClassDropdown();
+                        resetSectionDropdown();
+                        $('#classSelectStudent').prop('disabled', false);
+
+                        if (classes.length) {
+                            $.each(classes, function(_, cls) {
+                                $('#classSelectStudent').append($('<option>', {
+                                    value: cls.id,
+                                    text: cls.class_name
+                                }));
+                            });
+                        }
+
+                        if (selectedClassId) {
+                            $('#classSelectStudent').val(selectedClassId);
+                        }
+                        $('#classSelectStudent').niceSelect('update');
+
+                        if (selectedClassId) {
+                            loadSectionsByBoardClass(boardId, selectedClassId, selectedSectionId);
+                        }
+                    },
+                    error: function() {
+                        logBulk("Class load failed");
+                        resetClassDropdown();
+                        resetSectionDropdown();
+                    }
+                });
+            }
+
+            function loadSectionsByBoardClass(boardId, classId, selectedSectionId = '') {
+                const baseUrl = $('#url').val();
+                logBulk("Loading sections", {
+                    board_id: boardId,
+                    class_id: classId,
+                    academic_id: $('#academic_year').val()
+                });
+                $.ajax({
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        academic_id: $('#academic_year').val()
+                    },
+                    url: baseUrl + '/admission/get-sections-by-board-class/' + encodeURIComponent(boardId) + '/' + classId,
+                    success: function(sections) {
+                        logBulk("Sections loaded", sections);
+                        resetSectionDropdown();
+                        $('#sectionSelectStudent').prop('disabled', false);
+
+                        if (sections.length) {
+                            $.each(sections, function(_, section) {
+                                $('#sectionSelectStudent').append($('<option>', {
+                                    value: section.id,
+                                    text: section.section_name
+                                }));
+                            });
+                        }
+
+                        if (selectedSectionId) {
+                            $('#sectionSelectStudent').val(selectedSectionId);
+                        }
+                        $('#sectionSelectStudent').niceSelect('update');
+                    },
+                    error: function() {
+                        logBulk("Section load failed");
+                        resetSectionDropdown();
+                    }
+                });
+            }
+
+            $(document).ready(function() {
+                logBulk("Page ready");
+                resetClassDropdown();
+                resetSectionDropdown();
+
+                $(document).on('change', '#upload_content_file', function() {
+                    const file = this.files && this.files.length ? this.files[0] : null;
+                    logBulk("File selected", {
+                        file_name: file ? file.name : null,
+                        file_size: file ? file.size : null,
+                        file_type: file ? file.type : null
+                    });
+                });
+
+                $(document).on('change', '#import_board_id', function() {
+                    const boardId = $(this).val();
+                    logBulk("Board changed", {
+                        board_id: boardId
+                    });
+                    resetClassDropdown();
+                    resetSectionDropdown();
+
+                    if (!boardId) {
+                        return;
+                    }
+                    loadClassesByBoard(boardId);
+                });
+
+                $(document).on('change', '#classSelectStudent', function() {
+                    const boardId = $('#import_board_id').val();
+                    const classId = $(this).val();
+                    logBulk("Class changed", {
+                        board_id: boardId,
+                        class_id: classId
+                    });
+                    resetSectionDropdown();
+
+                    if (!boardId || !classId) {
+                        return;
+                    }
+                    loadSectionsByBoardClass(boardId, classId);
+                });
+
+                const initialBoardId = $('#import_board_id').val();
+                if (initialBoardId) {
+                    loadClassesByBoard(initialBoardId, oldClassId, oldSectionId);
+                }
+
+                $(document).on('change', '#sectionSelectStudent', function() {
+                    logBulk("Section changed", {
+                        section_id: $(this).val()
+                    });
+                });
+
+                $('#student_form').on('submit', function() {
+                    const fileInput = document.getElementById('upload_content_file');
+                    const file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
+                    logBulk("Submitting form", {
+                        session: $('#academic_year').val(),
+                        board_id: $('#import_board_id').val(),
+                        class_id: $('#classSelectStudent').val(),
+                        section_id: $('#sectionSelectStudent').val(),
+                        file_name: file ? file.name : null
+                    });
+                });
+            });
+        })(jQuery);
+    </script>
+@endpush

@@ -32,10 +32,14 @@ Vue.component('status-change-component', require('./components/chat/StatusChange
 import VueChatScroll from 'vue-chat-scroll'
 Vue.use(VueChatScroll)
 
-const app = new Vue({
-    el: '#admin-visitor-area'
-});
+if (document.getElementById('admin-visitor-area')) {
+    new Vue({
+        el: '#admin-visitor-area'
+    });
+}
 
-const app1 = new Vue({
-    el: '#main-nav-for-chat'
-});
+if (document.getElementById('main-nav-for-chat')) {
+    new Vue({
+        el: '#main-nav-for-chat'
+    });
+}

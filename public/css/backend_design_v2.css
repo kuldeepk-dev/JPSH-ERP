@@ -359,7 +359,7 @@ html[dir=rtl] .menu_seperator {
 }
 
 .Menu_NOtification_Wrap .notification_Header {
-  background-image: url(/images/summery-bg1.png?4191ffe7c5ba287b791382f29a587004);
+  background-image: url(../images/summery-bg1.png);
   background-size: cover;
   background-color: var(--primary-color);
   background-position: right;

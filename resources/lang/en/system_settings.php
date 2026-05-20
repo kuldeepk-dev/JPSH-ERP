@@ -330,6 +330,7 @@ return [
     'ticket_list' => 'Ticket List',
     'new_client_information' => 'New Client Information',
     'update_general_settings' => 'Update General Settings',
+    'boards' => 'Boards',
     'ss_page_load' => 'Ss Page Load',
     'promossion_without_exam' => 'Promotion Without Exam',
     'promotion_without_exam' => 'Promotion Without Exam',

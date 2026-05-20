@@ -83,33 +83,31 @@
 
 <script>
     window.jsLang = function(key, replace) {
-        let translation = true
+        let translation = key;
+        let replacements = replace || {};
+        let translations = window._translations || {};
+        let locale = window._locale || "en";
+        let localeEntry = translations[locale] || {};
+        let jsonFile = {};
 
-        let json_file = $.parseJSON(window._translations[window._locale]['json'])
-        translation = json_file[key]
-            ? json_file[key]
-            : key
+        try {
+            jsonFile = localeEntry.json ? JSON.parse(localeEntry.json) : {};
+        } catch (e) {
+            jsonFile = {};
+        }
 
+        if (jsonFile[key]) {
+            translation = jsonFile[key];
+        }
 
-        $.each(replace, (value, key) => {
-            translation = translation.replace(':' + key, value)
-        })
+        $.each(replacements, (value, placeholderKey) => {
+            translation = translation.replace(':' + placeholderKey, value);
+        });
 
-        return translation
+        return translation;
     }
     window.trans = function(key, replace) {
-        let translation = true
-
-        let json_file = $.parseJSON(window._translations[window._locale]['json'])
-        translation = json_file[key]
-            ? json_file[key]
-            : key
-
-
-        $.each(replace, (value, key) => {
-            translation = translation.replace(':' + key, value)
-        })
-        return translation
+        return window.jsLang(key, replace);
     }
     
 </script>
@@ -146,7 +144,7 @@
 <script src="<?php echo e(asset('public/backEnd/')); ?>/js/custom.js"></script>
 <script src="<?php echo e(asset('public/')); ?>/js/registration_custom.js"></script>
 <script src="<?php echo e(asset('public/backEnd/')); ?>/js/developer.js"></script>
-<script src="<?php echo e(url('Modules\Wallet\Resources\assets\js\wallet.js')); ?>"></script>
+<script src="<?php echo e(asset('Modules/Wallet/Resources/assets/js/wallet.js')); ?>"></script>
 <script>
     $('.close_modal').on('click', function() {
         $('.custom_notification').removeClass('open_notification');
@@ -202,4 +200,5 @@
 <?php endif; ?>
 </body>
 
-</html><?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/partials/footer.blade.php ENDPATH**/ ?>
+</html>
+<?php /**PATH C:\xampp\htdocs\infixEdu_v9.0.1\resources\views/backEnd/partials/footer.blade.php ENDPATH**/ ?>
