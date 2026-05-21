@@ -170,7 +170,6 @@
                 'id' => 'student_admission_form',
             ])->open()); ?>
 
-            <?php echo csrf_field(); ?>
             <input type="hidden" name="url" id="url" value="<?php echo e(URL::to('/')); ?>">
 
             <div class="admission-wizard">
@@ -1112,6 +1111,15 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 var formData = new FormData(form);
                 var $submitButton = $('#submit_admission');
                 var originalButtonText = $submitButton.text();
+                var csrfTokens = formData.getAll('_token');
+
+                if (csrfTokens.length > 1) {
+                    formData.delete('_token');
+                    formData.append('_token', csrfTokens[0]);
+                    logAdmissionDebug('Duplicate _token detected and normalized', {
+                        token_count: csrfTokens.length
+                    });
+                }
 
                 logAdmissionDebug('Submitting student admission payload', formDataToObject(formData));
 
@@ -1166,6 +1174,10 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                                 }
                             }
                             return;
+                        }
+
+                        if (xhr.responseJSON && xhr.responseJSON.debug) {
+                            console.error('[StudentAdmissionDebug] Backend exception details', xhr.responseJSON.debug);
                         }
 
                         if (xhr.responseJSON && xhr.responseJSON.message) {

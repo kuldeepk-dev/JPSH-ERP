@@ -101,6 +101,23 @@ class SmStudentAdmissionController extends Controller
         return $normalized;
     }
 
+    private function uploadedFileKeys(array $files): array
+    {
+        $keys = [];
+        foreach ($files as $key => $file) {
+            if (is_array($file)) {
+                foreach ($this->uploadedFileKeys($file) as $nestedKey) {
+                    $keys[] = $key.'.'.$nestedKey;
+                }
+                continue;
+            }
+
+            $keys[] = $key;
+        }
+
+        return $keys;
+    }
+
     private function isAdmissionAjaxRequest(Request $request): bool
     {
         return $request->expectsJson() || $request->ajax() || $request->wantsJson();
@@ -126,10 +143,16 @@ class SmStudentAdmissionController extends Controller
     private function admissionErrorResponse(Request $request, string $message, int $status = 500)
     {
         if ($this->isAdmissionAjaxRequest($request)) {
-            return response()->json([
+            $payload = [
                 'status' => false,
                 'message' => $message,
-            ], $status);
+            ];
+
+            if (app()->hasDebugModeEnabled() && $status >= 500) {
+                $payload['debug'] = true;
+            }
+
+            return response()->json($payload, $status);
         }
 
         Toastr::error($message, 'Failed');
@@ -730,12 +753,34 @@ class SmStudentAdmissionController extends Controller
             return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.');
 
         } catch (Exception $exception) {
-            $this->admissionDebugLog('store failed', [
+            Log::error('[StudentAdmissionDebug] store failed', [
                 'error' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
                 'trace' => $exception->getTraceAsString(),
+                'request_except_token' => $smStudentAdmissionRequest->except('_token'),
+                'uploaded_file_keys' => $this->uploadedFileKeys($smStudentAdmissionRequest->allFiles()),
+                'request_all_files' => $this->normalizeUploadedFiles($smStudentAdmissionRequest->allFiles()),
+                'board_id' => $smStudentAdmissionRequest->input('board_id'),
+                'class' => $smStudentAdmissionRequest->input('class'),
+                'section' => $smStudentAdmissionRequest->input('section'),
             ]);
             DB::rollback();
-            return $this->admissionErrorResponse($smStudentAdmissionRequest, 'Something went wrong. Please try again.');
+
+            if ($this->isAdmissionAjaxRequest($smStudentAdmissionRequest)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => app()->hasDebugModeEnabled() ? $exception->getMessage() : 'Something went wrong. Please try again.',
+                    'debug' => app()->hasDebugModeEnabled() ? [
+                        'file' => $exception->getFile(),
+                        'line' => $exception->getLine(),
+                        'trace' => $exception->getTraceAsString(),
+                    ] : null,
+                ], 500);
+            }
+
+            Toastr::error('Something went wrong. Please try again.', 'Failed');
+            throw $exception;
         }
     }
 
@@ -837,7 +882,6 @@ class SmStudentAdmissionController extends Controller
     private function createAdmissionApplication(Request $request, SmStudent $student, string $status): void
     {
         $payload = $this->buildAdmissionPayload($request, $student);
-        $payload['documents'] = $this->uploadAdmissionDocuments($request);
         $payload['documents'] = $this->uploadAdmissionDocuments($request);
         $application = StudentAdmissionApplication::where('user_id', Auth::id())
             ->where('school_id', Auth::user()->school_id)
