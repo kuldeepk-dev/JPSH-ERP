@@ -817,12 +817,135 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 }
             }
 
+            function formDataToObject(formData) {
+                var payload = {};
+                formData.forEach(function(value, key) {
+                    if (value instanceof File) {
+                        if (!payload[key]) {
+                            payload[key] = [];
+                        }
+                        payload[key].push({
+                            name: value.name,
+                            size: value.size,
+                            type: value.type
+                        });
+                    } else if (Object.prototype.hasOwnProperty.call(payload, key)) {
+                        if (!Array.isArray(payload[key])) {
+                            payload[key] = [payload[key]];
+                        }
+                        payload[key].push(value);
+                    } else {
+                        payload[key] = value;
+                    }
+                });
+                return payload;
+            }
+
+            function getFieldSelectors(fieldName) {
+                var selectors = ['[name="' + fieldName + '"]'];
+                if (fieldName.indexOf('.') !== -1) {
+                    var parts = fieldName.split('.');
+                    var bracketName = parts[0];
+                    for (var i = 1; i < parts.length; i += 1) {
+                        bracketName += '[' + parts[i] + ']';
+                    }
+                    selectors.push('[name="' + bracketName + '"]');
+                }
+                return selectors;
+            }
+
+            function findField(fieldName) {
+                var selectors = getFieldSelectors(fieldName);
+                for (var i = 0; i < selectors.length; i += 1) {
+                    var $field = $(selectors[i]);
+                    if ($field.length) {
+                        return $field.first();
+                    }
+                }
+                return $();
+            }
+
+            function getVisibleFieldTarget($field) {
+                if ($field.hasClass('nice-select')) {
+                    return $field;
+                }
+                if ($field.next('.nice-select').length) {
+                    return $field.next('.nice-select');
+                }
+                if ($field.next('.select2').length) {
+                    return $field.next('.select2');
+                }
+                if ($field.hasClass('select2-hidden-accessible')) {
+                    var $container = $field.next('.select2').find('.select2-selection');
+                    if ($container.length) {
+                        return $container;
+                    }
+                }
+                return $field;
+            }
+
+            function clearFormErrors() {
+                $('#student_admission_form .is-invalid').removeClass('is-invalid');
+                $('#student_admission_form .input-error').removeClass('input-error');
+                $('#student_admission_form .invalid-feedback.dynamic-error').remove();
+                $('#student_admission_form .nice-select.is-invalid').removeClass('is-invalid');
+                $('#student_admission_form .select2-selection.is-invalid').removeClass('is-invalid');
+            }
+
+            function activateStepForField($field) {
+                var $step = $field.closest('.admission-step');
+                if ($step.length) {
+                    var targetStep = parseInt($step.data('step'), 10);
+                    if (!Number.isNaN(targetStep) && currentStep !== targetStep) {
+                        currentStep = targetStep;
+                        updateStepper();
+                    }
+                }
+            }
+
+            function showFieldErrors(errors) {
+                Object.keys(errors || {}).forEach(function(fieldName) {
+                    var $field = findField(fieldName);
+                    if (!$field.length) {
+                        logAdmissionDebug('Error field not found in form', {
+                            field: fieldName,
+                            messages: errors[fieldName]
+                        });
+                        return;
+                    }
+
+                    var message = Array.isArray(errors[fieldName]) ? errors[fieldName][0] : errors[fieldName];
+                    var $visibleTarget = getVisibleFieldTarget($field);
+                    $field.addClass('is-invalid');
+                    $visibleTarget.addClass('is-invalid');
+                    $field.addClass('input-error');
+
+                    if ($visibleTarget.is($field)) {
+                        $field.after('<div class="invalid-feedback dynamic-error d-block">' + message + '</div>');
+                    } else {
+                        $visibleTarget.after('<div class="invalid-feedback dynamic-error d-block">' + message + '</div>');
+                    }
+                });
+            }
+
             function getClassSelect() {
                 return $('#class').length ? $('#class') : $('#admission_class_id');
             }
 
             function getSectionSelect() {
                 return $('#section').length ? $('#section') : $('#admission_section_id');
+            }
+
+            function getBoardSelect() {
+                return $('#board_id').length ? $('#board_id') : $('#admission_board_id');
+            }
+
+            function isAllBoards(value) {
+                if (value === null || typeof value === 'undefined') {
+                    return true;
+                }
+                var normalized = String(value).trim().toLowerCase();
+                return normalized === '' || normalized === '0' || normalized === 'all' || normalized === 'all boards';
             }
 
             function resetClassDropdown() {
@@ -934,7 +1057,7 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     });
             }
 
-            $(document).on('change', '#admission_board_id', function() {
+            $(document).on('change', '#admission_board_id, #board_id', function() {
                 var board = $(this).val();
                 logAdmissionDebug('Board onchange fired', board);
                 resetClassDropdown();
@@ -958,6 +1081,18 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 loadSectionsByBoardClass(board, classId, '');
             });
 
+            $(document).on('input change', '#student_admission_form input, #student_admission_form select, #student_admission_form textarea', function() {
+                var $field = $(this);
+                $field.removeClass('is-invalid input-error');
+                getVisibleFieldTarget($field).removeClass('is-invalid');
+                if ($field.next('.invalid-feedback.dynamic-error').length) {
+                    $field.next('.invalid-feedback.dynamic-error').remove();
+                }
+                if (getVisibleFieldTarget($field).next('.invalid-feedback.dynamic-error').length) {
+                    getVisibleFieldTarget($field).next('.invalid-feedback.dynamic-error').remove();
+                }
+            });
+
             $('#student_admission_form input[type="file"]').on('change', function() {
                 var preview = $('#document_preview');
                 preview.empty();
@@ -968,6 +1103,83 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 });
             });
 
+            $('#student_admission_form').on('submit', function(e) {
+                e.preventDefault();
+                clearFormErrors();
+
+                var form = this;
+                var $form = $(form);
+                var formData = new FormData(form);
+                var $submitButton = $('#submit_admission');
+                var originalButtonText = $submitButton.text();
+
+                logAdmissionDebug('Submitting student admission payload', formDataToObject(formData));
+
+                $submitButton.prop('disabled', true).text('Submitting...');
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    type: ($form.attr('method') || 'POST').toUpperCase(),
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        logAdmissionDebug('Student admission submit success response', response);
+                        toastr.success((response && response.message) || 'Student admission saved successfully.');
+
+                        setTimeout(function() {
+                            if (response && response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                                return;
+                            }
+                            window.location.reload();
+                        }, 500);
+                    },
+                    error: function(xhr) {
+                        logAdmissionDebug('Student admission submit error response', {
+                            status: xhr.status,
+                            responseJSON: xhr.responseJSON,
+                            responseText: xhr.responseText
+                        });
+
+                        if (xhr.status === 422 && xhr.responseJSON) {
+                            var responseMessage = xhr.responseJSON.message || 'Please fix the highlighted fields.';
+                            var responseErrors = xhr.responseJSON.errors || null;
+                            toastr.error(responseMessage);
+                            logAdmissionDebug('Validation errors', responseErrors);
+
+                            if (responseErrors) {
+                                showFieldErrors(responseErrors);
+                                var firstErrorField = Object.keys(responseErrors)[0];
+                                var $firstField = findField(firstErrorField);
+
+                                if ($firstField.length) {
+                                    activateStepForField($firstField);
+                                    $('html, body').animate({
+                                        scrollTop: Math.max($firstField.offset().top - 120, 0)
+                                    }, 400);
+                                    $firstField.trigger('focus');
+                                }
+                            }
+                            return;
+                        }
+
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            toastr.error(xhr.responseJSON.message);
+                        } else {
+                            toastr.error('Something went wrong. Please try again.');
+                        }
+                    },
+                    complete: function() {
+                        $submitButton.prop('disabled', false).text(originalButtonText);
+                    }
+                });
+            });
+
             updateStepper();
 
             logAdmissionDebug('Selector check #board_id length', $('#board_id').length);
@@ -975,10 +1187,21 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
             logAdmissionDebug('Selector check #admission_board_id length', $('#admission_board_id').length);
             logAdmissionDebug('Selector check #class length', $('#class').length);
             logAdmissionDebug('Selector check [name=\"class\"] length', $('[name="class"]').length);
-            var initialBoard = $('#admission_board_id').val();
+
+            var $boardSelect = getBoardSelect();
+            var globalHeaderBoard = <?php echo json_encode(selectedBoard(), 15, 512) ?>;
+            var initialBoard = $boardSelect.val();
+            logAdmissionDebug('Global/header board value', globalHeaderBoard);
             logAdmissionDebug('Initial board value on page load', initialBoard);
-            if (initialBoard) {
-                $('#admission_board_id').trigger('change');
+
+            if (isAllBoards(globalHeaderBoard)) {
+                $boardSelect.val('');
+                updateNiceSelect($boardSelect);
+                resetClassDropdown();
+                resetSectionDropdown();
+                logAdmissionDebug('Global board is All Boards. Board field reset to Select Board.');
+            } else if (initialBoard) {
+                $boardSelect.trigger('change');
             }
         })();
     </script>
@@ -1016,7 +1239,7 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 var draftBoard = draftData.board_id;
                 var draftClass = draftData.class;
                 var draftSection = draftData.section;
-                var $boardField = $('#admission_board_id').length ? $('#admission_board_id') : $('[name="board_id"]');
+                var $boardField = $('#board_id').length ? $('#board_id') : ($('#admission_board_id').length ? $('#admission_board_id') : $('[name="board_id"]'));
                 console.log('[StudentAdmissionDebug]', 'Board selector exists:', $boardField.length);
                 if (draftBoard && $boardField.length) {
                     console.log('[StudentAdmissionDebug]', 'Triggering board change for draft board:', draftBoard);

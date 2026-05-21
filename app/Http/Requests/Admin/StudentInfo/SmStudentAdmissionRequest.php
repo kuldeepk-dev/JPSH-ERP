@@ -7,6 +7,8 @@ use App\GlobalVariable;
 use App\Traits\CustomFields;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Models\SmStudentRegistrationField;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -372,5 +374,18 @@ class SmStudentAdmissionRequest extends FormRequest
         }
 
         return $attributes;
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        if ($this->expectsJson() || $this->ajax()) {
+            throw new HttpResponseException(response()->json([
+                'status' => false,
+                'message' => 'Please fix the highlighted fields.',
+                'errors' => $validator->errors(),
+            ], 422));
+        }
+
+        parent::failedValidation($validator);
     }
 }

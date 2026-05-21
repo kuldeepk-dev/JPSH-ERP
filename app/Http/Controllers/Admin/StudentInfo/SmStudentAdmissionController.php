@@ -101,6 +101,41 @@ class SmStudentAdmissionController extends Controller
         return $normalized;
     }
 
+    private function isAdmissionAjaxRequest(Request $request): bool
+    {
+        return $request->expectsJson() || $request->ajax() || $request->wantsJson();
+    }
+
+    private function admissionSuccessResponse(Request $request, string $message, ?string $redirectUrl = null)
+    {
+        if ($this->isAdmissionAjaxRequest($request)) {
+            return response()->json([
+                'status' => true,
+                'message' => $message,
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        if ($redirectUrl) {
+            return redirect()->to($redirectUrl);
+        }
+
+        return redirect()->back();
+    }
+
+    private function admissionErrorResponse(Request $request, string $message, int $status = 500)
+    {
+        if ($this->isAdmissionAjaxRequest($request)) {
+            return response()->json([
+                'status' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        Toastr::error($message, 'Failed');
+        return redirect()->back();
+    }
+
     public static function loadData()
     {
         $base_setup = SmBaseSetup::get(['id', 'base_setup_name', 'base_group_id']);
@@ -341,8 +376,7 @@ class SmStudentAdmissionController extends Controller
                     if (moduleStatusCheck('Lead') == true && $smStudentAdmissionRequest->lead_id) {
                         Lead::where('id', $smStudentAdmissionRequest->lead_id)->update(['is_converted' => 1]);
                         Toastr::success('Operation successful', 'Success');
-
-                        return redirect()->route('lead.index');
+                        return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.', route('lead.index'));
                     }
 
                     if ($smStudentAdmissionRequest->has('parent_registration_student_id') && moduleStatusCheck('ParentRegistration') == true) {
@@ -352,19 +386,16 @@ class SmStudentAdmissionController extends Controller
                         }
 
                         Toastr::success('Operation successful', 'Success');
-
-                        return redirect()->route('parentregistration.student-list');
+                        return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.', route('parentregistration.student-list'));
                     }
 
                     Toastr::success('Operation successful', 'Success');
-
-                    return redirect()->back();
+                    return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.');
 
                 }
 
                 Toastr::warning('Already Enroll', 'Warning');
-
-                return redirect()->back();
+                return $this->admissionErrorResponse($smStudentAdmissionRequest, 'Student is already enrolled.', 422);
             }
         }
 
@@ -687,19 +718,16 @@ class SmStudentAdmissionController extends Controller
                 }
 
                 Toastr::success('Operation successful', 'Success');
-
-                return redirect()->route('parentregistration.student-list');
+                return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.', route('parentregistration.student-list'));
             }
 
             if (moduleStatusCheck('Lead') == true && $smStudentAdmissionRequest->lead_id) {
                 Toastr::success('Operation successful', 'Success');
-
-                return redirect()->route('lead.index');
+                return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.', route('lead.index'));
             }
 
             Toastr::success('Operation successful', 'Success');
-
-            return redirect()->back();
+            return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student admission saved successfully.');
 
         } catch (Exception $exception) {
             $this->admissionDebugLog('store failed', [
@@ -707,8 +735,7 @@ class SmStudentAdmissionController extends Controller
                 'trace' => $exception->getTraceAsString(),
             ]);
             DB::rollback();
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
+            return $this->admissionErrorResponse($smStudentAdmissionRequest, 'Something went wrong. Please try again.');
         }
     }
 
