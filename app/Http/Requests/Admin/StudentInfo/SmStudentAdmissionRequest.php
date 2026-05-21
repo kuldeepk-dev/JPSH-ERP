@@ -28,6 +28,12 @@ class SmStudentAdmissionRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if (!$this->filled('id') && $this->route('student_id')) {
+            $this->merge([
+                'id' => $this->route('student_id'),
+            ]);
+        }
+
         if (!$this->filled('roll_number') && $this->filled('id_number')) {
             $this->merge([
                 'roll_number' => $this->id_number,
@@ -210,13 +216,13 @@ class SmStudentAdmissionRequest extends FormRequest
                 }),
                 'nullable', 'max:'.$maxFileSize, ],
             'aadhaar_number' => ['nullable', 'regex:/^[0-9]{12}$/'],
-            'document_birth_certificate' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
-            'document_transfer_certificate' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
-            'document_passport_photos' => ['required'],
+            'document_birth_certificate' => [$this->id ? 'nullable' : 'required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_transfer_certificate' => [$this->id ? 'nullable' : 'required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_passport_photos' => [$this->id ? 'nullable' : 'required'],
             'document_passport_photos.*' => ['mimes:jpg,jpeg,png', 'max:'.$maxFileSize],
-            'document_report_card' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_report_card' => [$this->id ? 'nullable' : 'required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
             'document_category_certificate' => ['nullable', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
-            'document_aadhaar' => ['required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
+            'document_aadhaar' => [$this->id ? 'nullable' : 'required', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maxFileSize],
             'document_file_2' => [
                 Rule::requiredIf(function () use ($field): bool {
                     return in_array('document_file_2', $field);

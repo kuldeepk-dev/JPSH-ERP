@@ -1,6 +1,6 @@
 @extends('backEnd.master')
 @section('title')
-    @lang('student.student_admission')
+    {{ $page_title ?? __('student.student_admission') }}
 @endsection
 
 @push('css')
@@ -151,11 +151,11 @@
     <section class="sms-breadcrumb mb-20 up_breadcrumb">
         <div class="container-fluid">
             <div class="row justify-content-between">
-                <h1>@lang('student.student_admission')</h1>
+                <h1>{{ $page_title ?? __('student.student_admission') }}</h1>
                 <div class="bc-pages">
                     <a href="{{ route('dashboard') }}">@lang('common.dashboard')</a>
                     <a href="#">@lang('student.student_information')</a>
-                    <a href="#">@lang('student.student_admission')</a>
+                    <a href="#">{{ $page_title ?? __('student.student_admission') }}</a>
                 </div>
             </div>
         </div>
@@ -163,17 +163,20 @@
 
     <section class="admin-visitor-area up_st_admin_visitor">
         <div class="container-fluid p-0">
-            {{ html()->form('POST', route('student_store'))->attributes([
+            {{ html()->form('POST', $form_action ?? route('student_store'))->attributes([
                 'class' => 'form-horizontal studentadmission',
                 'enctype' => 'multipart/form-data',
                 'files' => true,
                 'id' => 'student_admission_form',
             ])->open() }}
+            <input type="hidden" name="id" value="{{ $edit_student_id }}">
+            <input type="hidden" name="student_id" value="{{ $edit_student_id }}">
+            <input type="hidden" name="form_mode" id="form_mode" value="{{ $form_mode ?? 'create' }}">
             <input type="hidden" name="url" id="url" value="{{ URL::to('/') }}">
 
             <div class="admission-wizard">
                 <div class="admission-stepper">
-                    <h4>Admission Progress</h4>
+                    <h4>{{ $page_title ?? 'Admission Progress' }}</h4>
                     <div class="admission-progress">
                         <div class="admission-progress-bar" id="admission_progress_bar"></div>
                     </div>
@@ -193,7 +196,7 @@
                 <div>
                     <div class="admission-step active" data-step="1">
                         <div class="admission-card">
-                            <h4>Student Information</h4>
+                            <h4>{{ $card_title ?? 'Student Information' }}</h4>
                             <div class="row">
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Academic Year<span class="required-star">*</span></label>
@@ -635,8 +638,11 @@
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Birth Certificate<span class="required-star">*</span></label>
-                                    <input class="form-control" type="file" name="document_file_1" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <input class="form-control" type="file" name="document_birth_certificate" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <input class="form-control" type="file" name="document_file_1" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    <input class="form-control" type="file" name="document_birth_certificate" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    @if (!empty($edit_student_data['existing_documents']['document_file_1']))
+                                        <small class="d-block mt-2">Existing: <a href="{{ asset($edit_student_data['existing_documents']['document_file_1']) }}" target="_blank">{{ basename($edit_student_data['existing_documents']['document_file_1']) }}</a></small>
+                                    @endif
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Document Title 2</label>
@@ -644,12 +650,15 @@
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Transfer Certificate<span class="required-star">*</span></label>
-                                    <input class="form-control" type="file" name="document_file_2" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <input class="form-control" type="file" name="document_transfer_certificate" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <input class="form-control" type="file" name="document_file_2" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    <input class="form-control" type="file" name="document_transfer_certificate" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    @if (!empty($edit_student_data['existing_documents']['document_file_2']))
+                                        <small class="d-block mt-2">Existing: <a href="{{ asset($edit_student_data['existing_documents']['document_file_2']) }}" target="_blank">{{ basename($edit_student_data['existing_documents']['document_file_2']) }}</a></small>
+                                    @endif
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Passport Photos<span class="required-star">*</span></label>
-                                    <input class="form-control" type="file" name="document_passport_photos" accept=".jpg,.jpeg,.png" multiple required>
+                                    <input class="form-control" type="file" name="document_passport_photos" accept=".jpg,.jpeg,.png" multiple {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Document Title 3</label>
@@ -657,8 +666,11 @@
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Report Card<span class="required-star">*</span></label>
-                                    <input class="form-control" type="file" name="document_file_3" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <input class="form-control" type="file" name="document_report_card" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <input class="form-control" type="file" name="document_file_3" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    <input class="form-control" type="file" name="document_report_card" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
+                                    @if (!empty($edit_student_data['existing_documents']['document_file_3']))
+                                        <small class="d-block mt-2">Existing: <a href="{{ asset($edit_student_data['existing_documents']['document_file_3']) }}" target="_blank">{{ basename($edit_student_data['existing_documents']['document_file_3']) }}</a></small>
+                                    @endif
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Document Title 4</label>
@@ -668,10 +680,13 @@
                                     <label class="primary_input_label">Category Certificate (SC/ST/OBC/SBC)</label>
                                     <input class="form-control" type="file" name="document_file_4" accept=".pdf,.jpg,.jpeg,.png">
                                     <input class="form-control" type="file" name="document_category_certificate" accept=".pdf,.jpg,.jpeg,.png">
+                                    @if (!empty($edit_student_data['existing_documents']['document_file_4']))
+                                        <small class="d-block mt-2">Existing: <a href="{{ asset($edit_student_data['existing_documents']['document_file_4']) }}" target="_blank">{{ basename($edit_student_data['existing_documents']['document_file_4']) }}</a></small>
+                                    @endif
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Aadhaar Copies<span class="required-star">*</span></label>
-                                    <input class="form-control" type="file" name="document_aadhaar" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <input class="form-control" type="file" name="document_aadhaar" accept=".pdf,.jpg,.jpeg,.png" {{ ($form_mode ?? 'create') === 'create' ? 'required' : '' }}>
                                 </div>
                             </div>
                             <div class="file-preview" id="document_preview"></div>
@@ -708,9 +723,11 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     <div class="admission-actions">
                         <button type="button" class="primary-btn fix-gr-bg" id="prev_step">Previous</button>
                         <div class="d-flex" style="gap: 10px;">
-                            <button type="button" class="primary-btn tr-bg" id="save_draft">Save Draft</button>
+                            @if (($form_mode ?? 'create') !== 'edit')
+                                <button type="button" class="primary-btn tr-bg" id="save_draft">Save Draft</button>
+                            @endif
                             <button type="button" class="primary-btn fix-gr-bg" id="next_step">Next</button>
-                            <button type="submit" class="primary-btn fix-gr-bg" id="submit_admission" style="display:none;">Submit Application</button>
+                            <button type="submit" class="primary-btn fix-gr-bg" id="submit_admission" style="display:none;">{{ $submit_button_text ?? 'Submit Application' }}</button>
                         </div>
                     </div>
                 </div>
@@ -726,6 +743,8 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
             console.log('=== ADMISSION WIZARD SCRIPT INITIALIZED ===');
             var currentStep = 1;
             var totalSteps = 9;
+            var formMode = @json($form_mode ?? 'create');
+            var editStudentData = @json($edit_student_data ?? null);
 
             function updateStepper() {
                 document.querySelectorAll('.admission-step').forEach(function(step) {
@@ -782,21 +801,24 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 }
             });
 
-            document.getElementById('save_draft').addEventListener('click', function() {
-                var formData = $('#student_admission_form').serialize();
-                $.post('{{ route('student_admission_draft') }}', formData)
-                    .done(function(resp) {
-                        toastr.success('Draft saved: ' + resp.application_id, 'Success');
-                    })
-                    .fail(function() {
-                        toastr.error('Draft save failed', 'Error');
-                    });
-            });
+            var saveDraftButton = document.getElementById('save_draft');
+            if (saveDraftButton) {
+                saveDraftButton.addEventListener('click', function() {
+                    var formData = $('#student_admission_form').serialize();
+                    $.post('{{ route('student_admission_draft') }}', formData)
+                        .done(function(resp) {
+                            toastr.success('Draft saved: ' + resp.application_id, 'Success');
+                        })
+                        .fail(function() {
+                            toastr.error('Draft save failed', 'Error');
+                        });
+                });
 
-            var draftTimer = setInterval(function() {
-                var formData = $('#student_admission_form').serialize();
-                $.post('{{ route('student_admission_draft') }}', formData);
-            }, 60000);
+                setInterval(function() {
+                    var formData = $('#student_admission_form').serialize();
+                    $.post('{{ route('student_admission_draft') }}', formData);
+                }, 60000);
+            }
 
             function logAdmissionDebug(message, payload) {
                 if (typeof payload === 'undefined') {
@@ -921,6 +943,83 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                         $visibleTarget.after('<div class="invalid-feedback dynamic-error d-block">' + message + '</div>');
                     }
                 });
+            }
+
+            function refreshSelectField($field) {
+                if (!$field.length) {
+                    return;
+                }
+                updateNiceSelect($field);
+                $field.trigger('change');
+            }
+
+            function setFieldValue(fieldName, value) {
+                var $field = findField(fieldName);
+                if (!$field.length) {
+                    logAdmissionDebug('Field not found in form', fieldName);
+                    return;
+                }
+
+                if ($field.is(':checkbox')) {
+                    $field.prop('checked', value === true || value === '1' || value === 1 || value === 'on');
+                } else if ($field.is(':radio')) {
+                    $('[name="' + fieldName + '"][value="' + value + '"]').prop('checked', true);
+                } else {
+                    $field.val(value);
+                }
+
+                updateNiceSelect($field);
+            }
+
+            function applyStudentEditData(studentData) {
+                if (!studentData) {
+                    return;
+                }
+
+                logAdmissionDebug('Edit mode detected');
+                logAdmissionDebug('Student edit data loaded', studentData);
+
+                var skipFields = ['board_id', 'class', 'section', 'existing_documents', 'siblings'];
+                Object.keys(studentData).forEach(function(key) {
+                    var value = studentData[key];
+                    if (skipFields.indexOf(key) !== -1 || value === null || typeof value === 'object') {
+                        return;
+                    }
+                    setFieldValue(key, value);
+                });
+
+                if (Array.isArray(studentData.siblings)) {
+                    studentData.siblings.forEach(function(sibling, index) {
+                        if (!sibling) {
+                            return;
+                        }
+                        Object.keys(sibling).forEach(function(key) {
+                            if (typeof sibling[key] !== 'object') {
+                                setFieldValue('siblings[' + index + '][' + key + ']', sibling[key]);
+                            }
+                        });
+                    });
+                }
+
+                var editBoard = studentData.board_id;
+                var editClass = studentData.class;
+                var editSection = studentData.section;
+                var $boardField = getBoardSelect();
+
+                if (editBoard && $boardField.length) {
+                    logAdmissionDebug('Setting board', editBoard);
+                    $boardField.val(editBoard);
+                    updateNiceSelect($boardField);
+                    logAdmissionDebug('Loading classes for edit board', editBoard);
+                    loadClassesByBoard(editBoard, editClass, editSection);
+                    if (editClass) {
+                        logAdmissionDebug('Setting class', editClass);
+                    }
+                    if (editSection) {
+                        logAdmissionDebug('Loading sections for edit class', editClass);
+                        logAdmissionDebug('Setting section', editSection);
+                    }
+                }
             }
 
             function getClassSelect() {
@@ -1118,6 +1217,7 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 }
 
                 logAdmissionDebug('Submitting student admission payload', formDataToObject(formData));
+                logAdmissionDebug('Submit mode', formMode);
 
                 $submitButton.prop('disabled', true).text('Submitting...');
 
@@ -1202,7 +1302,10 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
             logAdmissionDebug('Global/header board value', globalHeaderBoard);
             logAdmissionDebug('Initial board value on page load', initialBoard);
 
-            if (isAllBoards(globalHeaderBoard)) {
+            if (formMode === 'edit' && editStudentData) {
+                resetClassDropdown();
+                resetSectionDropdown();
+            } else if (isAllBoards(globalHeaderBoard)) {
                 $boardSelect.val('');
                 updateNiceSelect($boardSelect);
                 resetClassDropdown();
@@ -1210,6 +1313,10 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 logAdmissionDebug('Global board is All Boards. Board field reset to Select Board.');
             } else if (initialBoard) {
                 $boardSelect.trigger('change');
+            }
+
+            if (formMode === 'edit' && editStudentData) {
+                applyStudentEditData(editStudentData);
             }
         })();
     </script>

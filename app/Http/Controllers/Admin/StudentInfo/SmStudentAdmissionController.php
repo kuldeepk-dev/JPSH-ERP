@@ -230,6 +230,14 @@ class SmStudentAdmissionController extends Controller
                 return view('university::admission.add_student_admission', $data);
             }
 
+            $data['form_mode'] = 'create';
+            $data['form_action'] = route('student_store');
+            $data['submit_button_text'] = 'Submit Application';
+            $data['page_title'] = 'Student Admission';
+            $data['card_title'] = 'Student Information';
+            $data['edit_student_id'] = null;
+            $data['edit_student_data'] = null;
+
             return view('backEnd.studentInformation.student_admission_wizard', $data);
         /*
         } catch (Exception $exception) {
@@ -238,6 +246,48 @@ class SmStudentAdmissionController extends Controller
             return redirect()->back();
         }
         */
+    }
+
+    public function wizardEdit(Request $request, int $student_id)
+    {
+        $data = static::loadData();
+        $student = SmStudent::with(['parents', 'studentRecords.class', 'studentRecords.section'])->findOrFail($student_id);
+        $defaultRecord = $student->studentRecords
+            ->where('school_id', auth()->user()->school_id)
+            ->sortByDesc('is_default')
+            ->sortByDesc('id')
+            ->first();
+
+        $data['max_admission_id'] = SmStudent::where('school_id', Auth::user()->school_id)->max('admission_no');
+        $data['max_roll_id'] = SmStudent::where('school_id', Auth::user()->school_id)->max('roll_no');
+        $data['draft_application'] = null;
+        $data['form_mode'] = 'edit';
+        $data['form_action'] = route('student_admission_update', ['student_id' => $student_id]);
+        $data['submit_button_text'] = 'Update Student';
+        $data['page_title'] = 'Edit Student';
+        $data['card_title'] = 'Edit Student';
+        $data['edit_student_id'] = $student_id;
+        $data['edit_student'] = $student;
+        $data['edit_student_data'] = $this->buildWizardEditPayload($student, $defaultRecord);
+
+        $this->admissionDebugLog('Controller hit: wizardEdit', [
+            'route' => optional($request->route())->getName(),
+            'student_id' => $student_id,
+            'board_id' => $data['edit_student_data']['board_id'] ?? null,
+            'class' => $data['edit_student_data']['class'] ?? null,
+            'section' => $data['edit_student_data']['section'] ?? null,
+        ]);
+
+        return view('backEnd.studentInformation.student_admission_wizard', $data);
+    }
+
+    public function wizardUpdate(SmStudentAdmissionRequest $smStudentAdmissionRequest, int $student_id)
+    {
+        $smStudentAdmissionRequest->merge([
+            'id' => $student_id,
+        ]);
+
+        return $this->update($smStudentAdmissionRequest);
     }
 
     public function getClassesByBoard(Request $request, string $board_id)
@@ -879,6 +929,96 @@ class SmStudentAdmissionController extends Controller
         return $payload;
     }
 
+    private function buildWizardEditPayload(SmStudent $student, $defaultRecord): array
+    {
+        $parent = $student->parents;
+        $siblings = SmStudent::where('parent_id', $student->parent_id)
+            ->where('id', '!=', $student->id)
+            ->take(2)
+            ->get()
+            ->map(function (SmStudent $sibling): array {
+                return [
+                    'name' => trim($sibling->full_name ?: $sibling->first_name.' '.$sibling->last_name),
+                    'class' => optional($sibling->defaultClass)->class_name,
+                    'age' => $sibling->age,
+                    'school' => null,
+                ];
+            })
+            ->values()
+            ->all();
+
+        while (count($siblings) < 2) {
+            $siblings[] = [
+                'name' => null,
+                'class' => null,
+                'age' => null,
+                'school' => null,
+            ];
+        }
+
+        return [
+            'id' => $student->id,
+            'session' => $defaultRecord->academic_id ?? $student->academic_id,
+            'board_id' => $defaultRecord->board_name ?? $student->board_name,
+            'class' => $defaultRecord->class_id ?? null,
+            'section' => $defaultRecord->section_id ?? null,
+            'admission_number' => $student->admission_no,
+            'roll_number' => $defaultRecord->roll_no ?? $student->roll_no,
+            'admission_date' => ! empty($student->admission_date) ? date('Y-m-d', strtotime((string) $student->admission_date)) : null,
+            'first_name' => $student->first_name,
+            'last_name' => $student->last_name,
+            'email_address' => $student->email,
+            'gender' => $student->gender_id,
+            'date_of_birth' => ! empty($student->date_of_birth) ? date('Y-m-d', strtotime((string) $student->date_of_birth)) : null,
+            'aadhaar_number' => $student->aadhaar_number ?? null,
+            'age' => $student->age,
+            'religion' => $student->religion_id,
+            'blood_group' => $student->bloodgroup_id,
+            'caste' => $student->caste,
+            'student_category_id' => $student->student_category_id,
+            'student_group_id' => $student->student_group_id,
+            'current_address' => $student->current_address,
+            'permanent_address' => $student->permanent_address,
+            'phone_number' => $student->mobile,
+            'height' => $student->height,
+            'weight' => $student->weight,
+            'route' => $student->route_list_id,
+            'vehicle' => $student->vechile_id,
+            'dormitory_name' => $student->dormitory_id,
+            'room_number' => $student->room_id,
+            'national_id_number' => $student->national_id_no,
+            'local_id_number' => $student->local_id_no,
+            'bank_account_number' => $student->bank_account_no,
+            'bank_name' => $student->bank_name,
+            'previous_school_details' => $student->previous_school_details,
+            'additional_notes' => $student->aditional_notes,
+            'ifsc_code' => $student->ifsc_code,
+            'fathers_name' => $parent->fathers_name ?? null,
+            'fathers_occupation' => $parent->fathers_occupation ?? null,
+            'fathers_phone' => $parent->fathers_mobile ?? null,
+            'mothers_name' => $parent->mothers_name ?? null,
+            'mothers_occupation' => $parent->mothers_occupation ?? null,
+            'mothers_phone' => $parent->mothers_mobile ?? null,
+            'guardians_name' => $parent->guardians_name ?? null,
+            'relation' => $parent->guardians_relation ?? null,
+            'guardians_occupation' => $parent->guardians_occupation ?? null,
+            'guardians_address' => $parent->guardians_address ?? null,
+            'guardians_phone' => $parent->guardians_mobile ?? null,
+            'guardians_email' => $parent->guardians_email ?? null,
+            'siblings' => $siblings,
+            'document_title_1' => $student->document_title_1,
+            'document_title_2' => $student->document_title_2,
+            'document_title_3' => $student->document_title_3,
+            'document_title_4' => $student->document_title_4,
+            'existing_documents' => [
+                'document_file_1' => $student->document_file_1,
+                'document_file_2' => $student->document_file_2,
+                'document_file_3' => $student->document_file_3,
+                'document_file_4' => $student->document_file_4,
+            ],
+        ];
+    }
+
     private function createAdmissionApplication(Request $request, SmStudent $student, string $status): void
     {
         $payload = $this->buildAdmissionPayload($request, $student);
@@ -979,6 +1119,14 @@ class SmStudentAdmissionController extends Controller
         // custom field validation start
         $validator = Validator::make($request->all(), $this->generateValidateRules('student_registration', $student_detail));
         if ($validator->fails()) {
+            if ($this->isAdmissionAjaxRequest($request)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Please fix the highlighted fields.',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
             $errors = $validator->errors();
             foreach ($errors->all() as $error) {
                 Toastr::error(str_replace('custom f.', '', $error), 'Failed');
@@ -1188,8 +1336,22 @@ class SmStudentAdmissionController extends Controller
             DB::commit();
         } catch (Exception $exception) {
             DB::rollback();
-            Toastr::error('Operation Failed', 'Failed');
+            Log::error('[StudentAdmissionDebug] updateStudentInfo failed', [
+                'error' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
+                'student_id' => $request->id,
+            ]);
 
+            if ($this->isAdmissionAjaxRequest($request)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => app()->hasDebugModeEnabled() ? $exception->getMessage() : 'Something went wrong. Please try again.',
+                ], 500);
+            }
+
+            Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
 
@@ -1209,14 +1371,28 @@ class SmStudentAdmissionController extends Controller
                 ->where('id', '!=', $studentRecord->id)
                 ->where('school_id', auth()->user()->school_id)->first();
             if ($exitRoll) {
+                if ($this->isAdmissionAjaxRequest($smStudentAdmissionRequest)) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Please fix the highlighted fields.',
+                        'errors' => [
+                            'roll_number' => ['Sorry! Roll Number Already Exit.'],
+                        ],
+                    ], 422);
+                }
+
                 Toastr::error('Sorry! Roll Number Already Exit.', 'Failed');
                 return redirect()->route('student_edit', [$smStudentAdmissionRequest->id]);
             }
         }
 
-        $this->updateStudentInfo($smStudentAdmissionRequest, $studentRecord);
+        $response = $this->updateStudentInfo($smStudentAdmissionRequest, $studentRecord);
+        if ($response) {
+            return $response;
+        }
+
         Toastr::success('Operation successful', 'Success');
-        return redirect('student-list');
+        return $this->admissionSuccessResponse($smStudentAdmissionRequest, 'Student updated successfully.', url('student-list'));
         /*
         } catch (\Throwable $th) {
             throw $th;

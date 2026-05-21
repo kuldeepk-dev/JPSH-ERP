@@ -1066,6 +1066,8 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
         // Student Module /Student Admission
         Route::get('student-admission', ['as' => 'student_admission', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@index'])->middleware('userRolePermission:student_admission');
+        Route::get('student-admission/{student_id}/edit', ['as' => 'student_admission_edit', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@wizardEdit'])->middleware('userRolePermission:student_edit');
+        Route::post('student-admission/{student_id}/update', ['as' => 'student_admission_update', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@wizardUpdate'])->middleware('userRolePermission:student_update');
         Route::post('student-admission-draft', ['as' => 'student_admission_draft', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@saveDraft'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-applications', ['as' => 'student_admission_applications', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applications'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-applications/{id}', ['as' => 'student_admission_application_show', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationShow'])->middleware('userRolePermission:student_admission');
