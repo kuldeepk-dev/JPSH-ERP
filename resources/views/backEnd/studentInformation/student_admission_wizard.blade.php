@@ -799,123 +799,159 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 $.post('{{ route('student_admission_draft') }}', formData);
             }, 60000);
 
-            document.getElementById('admission_board_id').addEventListener('change', function() {
-                var board = this.value;
+            function logAdmissionDebug(message, payload) {
+                if (typeof payload === 'undefined') {
+                    console.log('[StudentAdmissionDebug]', message);
+                } else {
+                    console.log('[StudentAdmissionDebug]', message, payload);
+                }
+            }
+
+            function updateNiceSelect($el) {
+                if ($.fn.niceSelect && $el.length) {
+                    $el.niceSelect('update');
+                }
+            }
+
+            function getClassSelect() {
+                return $('#class').length ? $('#class') : $('#admission_class_id');
+            }
+
+            function getSectionSelect() {
+                return $('#section').length ? $('#section') : $('#admission_section_id');
+            }
+
+            function resetClassDropdown() {
+                var $class = getClassSelect();
+                $class.empty().append('<option value="">Select Class</option>');
+                $class.prop('disabled', true);
+                updateNiceSelect($class);
+                logAdmissionDebug('Class dropdown enabled state', !$class.prop('disabled'));
+            }
+
+            function resetSectionDropdown() {
+                var $section = getSectionSelect();
+                $section.empty().append('<option value="">Select Section</option>');
+                $section.prop('disabled', true);
+                updateNiceSelect($section);
+                logAdmissionDebug('Section dropdown enabled state', !$section.prop('disabled'));
+            }
+
+            function loadClassesByBoard(board, selectedClass, selectedSection) {
                 var url = $('#url').val();
                 var academicId = $('#academic_year').val();
-
-                console.log('=== BOARD CHANGE EVENT ===');
-                console.log('Selected Board:', board);
-                console.log('Academic Year ID:', academicId);
-                console.log('Base URL:', url);
-
-                $('#admission_class_id').empty().append('<option value="">Select Class</option>');
-                $('#admission_section_id').empty().append('<option value="">Select Section</option>');
-                
-                if ($('#admission_class_id').niceSelect) { 
-                    $('#admission_class_id').niceSelect('update');
-                    console.log('niceSelect updated for class dropdown');
-                }
-                if ($('#admission_section_id').niceSelect) { 
-                    $('#admission_section_id').niceSelect('update');
-                    console.log('niceSelect updated for section dropdown');
-                }
-
-                if (!board) {
-                    console.log('Board is empty, skipping API call');
-                    return;
-                }
-
                 var encodedBoard = encodeURIComponent(board);
                 var apiUrl = url + '/admission/get-classes-by-board/' + encodedBoard;
-                console.log('Making API request to:', apiUrl);
-                console.log('With params:', { academic_id: academicId });
+
+                logAdmissionDebug('Class API URL', apiUrl);
+                logAdmissionDebug('Class API payload', { academic_id: academicId });
 
                 $.get(apiUrl, { academic_id: academicId })
-                    .done(function(classes) {
-                        console.log('API Response Received:', classes);
-                        console.log('Number of classes:', classes ? classes.length : 0);
-                        
-                        if (classes && classes.length > 0) {
-                            console.log('Classes found, adding to dropdown...');
+                    .done(function(response) {
+                        logAdmissionDebug('Class API response', response);
+                        var classes = Array.isArray(response) ? response : (response.classes || []);
+                        var $class = getClassSelect();
+                        var $section = getSectionSelect();
+                        logAdmissionDebug('Parsed classes', classes);
+
+                        resetClassDropdown();
+                        resetSectionDropdown();
+                        if (classes.length) {
+                            $class.prop('disabled', false);
                             classes.forEach(function(cls) {
-                                console.log('Adding class:', cls.id, cls.class_name);
-                                $('#admission_class_id').append('<option value="' + cls.id + '">' + cls.class_name + '</option>');
+                                $class.append('<option value="' + cls.id + '">' + cls.class_name + '</option>');
                             });
-                            console.log('All classes added to dropdown');
                         } else {
-                            console.warn('No classes returned from API');
+                            $class.prop('disabled', true);
                         }
-                        
-                        if ($('#admission_class_id').niceSelect) { 
-                            $('#admission_class_id').niceSelect('update');
-                            console.log('niceSelect updated with new class options');
+                        updateNiceSelect($class);
+                        logAdmissionDebug('Class dropdown enabled state', !$class.prop('disabled'));
+                        logAdmissionDebug('Final class dropdown HTML', $class.html());
+                        logAdmissionDebug('Class dropdown value', $class.val());
+
+                        if (selectedClass) {
+                            $class.val(selectedClass);
+                            updateNiceSelect($class);
+                            if ($class.val()) {
+                                loadSectionsByBoardClass(board, selectedClass, selectedSection);
+                            }
+                        } else {
+                            $section.prop('disabled', true);
+                            updateNiceSelect($section);
+                            logAdmissionDebug('Section dropdown enabled state', !$section.prop('disabled'));
                         }
                     })
                     .fail(function(xhr) {
-                        console.error('=== API REQUEST FAILED ===');
-                        console.error('Status:', xhr.status);
-                        console.error('Status Text:', xhr.statusText);
-                        console.error('Response Text:', xhr.responseText);
-                        console.error('Full XHR:', xhr);
+                        logAdmissionDebug('Class API failed', {
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            responseText: xhr.responseText
+                        });
+                        resetClassDropdown();
+                        resetSectionDropdown();
                     });
-            });
+            }
 
-            document.getElementById('admission_class_id').addEventListener('change', function() {
-                var classId = this.value;
-                var board = $('#admission_board_id').val();
-                var academicId = $('#academic_year').val();
+            function loadSectionsByBoardClass(board, classId, selectedSection) {
                 var url = $('#url').val();
-
-                console.log('=== CLASS CHANGE EVENT ===');
-                console.log('Selected Class ID:', classId);
-                console.log('Selected Board:', board);
-                console.log('Academic Year ID:', academicId);
-
-                $('#admission_section_id').empty().append('<option value="">Select Section</option>');
-                if ($('#admission_section_id').niceSelect) { 
-                    $('#admission_section_id').niceSelect('update');
-                    console.log('niceSelect updated for section dropdown');
-                }
-
-                if (!board || !classId) {
-                    console.log('Missing board or class, skipping API call. Board:', board, 'ClassId:', classId);
-                    return;
-                }
-
+                var academicId = $('#academic_year').val();
                 var encodedBoard = encodeURIComponent(board);
                 var apiUrl = url + '/admission/get-sections-by-board-class/' + encodedBoard + '/' + classId;
-                console.log('Making API request to:', apiUrl);
-                console.log('With params:', { academic_id: academicId });
+
+                logAdmissionDebug('Section API URL', apiUrl);
+                logAdmissionDebug('Section API payload', { academic_id: academicId });
 
                 $.get(apiUrl, { academic_id: academicId })
                     .done(function(sections) {
-                        console.log('API Response Received:', sections);
-                        console.log('Number of sections:', sections ? sections.length : 0);
-                        
-                        if (sections && sections.length > 0) {
-                            console.log('Sections found, adding to dropdown...');
+                        logAdmissionDebug('Section API response', sections);
+                        var $section = getSectionSelect();
+                        resetSectionDropdown();
+                        $section.prop('disabled', false);
+
+                        if (sections && sections.length) {
                             sections.forEach(function(section) {
-                                console.log('Adding section:', section.id, section.section_name);
-                                $('#admission_section_id').append('<option value="' + section.id + '">' + section.section_name + '</option>');
+                                $section.append('<option value="' + section.id + '">' + section.section_name + '</option>');
                             });
-                            console.log('All sections added to dropdown');
-                        } else {
-                            console.warn('No sections returned from API');
                         }
-                        
-                        if ($('#admission_section_id').niceSelect) { 
-                            $('#admission_section_id').niceSelect('update');
-                            console.log('niceSelect updated with new section options');
+
+                        if (selectedSection) {
+                            $section.val(selectedSection);
                         }
+                        updateNiceSelect($section);
+                        logAdmissionDebug('Section dropdown enabled state', !$section.prop('disabled'));
                     })
                     .fail(function(xhr) {
-                        console.error('=== API REQUEST FAILED ===');
-                        console.error('Status:', xhr.status);
-                        console.error('Status Text:', xhr.statusText);
-                        console.error('Response Text:', xhr.responseText);
-                        console.error('Full XHR:', xhr);
+                        logAdmissionDebug('Section API failed', {
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            responseText: xhr.responseText
+                        });
+                        resetSectionDropdown();
                     });
+            }
+
+            $(document).on('change', '#admission_board_id', function() {
+                var board = $(this).val();
+                logAdmissionDebug('Board onchange fired', board);
+                resetClassDropdown();
+                resetSectionDropdown();
+                if (!board) {
+                    logAdmissionDebug('Board empty, skipping class API');
+                    return;
+                }
+                loadClassesByBoard(board, '', '');
+            });
+
+            $(document).on('change', '#admission_class_id, #class', function() {
+                var classId = $(this).val();
+                var board = $('#admission_board_id').val();
+                logAdmissionDebug('Class onchange fired', { board: board, class_id: classId });
+                resetSectionDropdown();
+                if (!board || !classId) {
+                    logAdmissionDebug('Class/board missing, skipping section API', { board: board, class_id: classId });
+                    return;
+                }
+                loadSectionsByBoardClass(board, classId, '');
             });
 
             $('#student_admission_form input[type="file"]').on('change', function() {
@@ -930,44 +966,67 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
 
             updateStepper();
 
+            logAdmissionDebug('Selector check #board_id length', $('#board_id').length);
+            logAdmissionDebug('Selector check [name=\"board_id\"] length', $('[name="board_id"]').length);
+            logAdmissionDebug('Selector check #admission_board_id length', $('#admission_board_id').length);
+            logAdmissionDebug('Selector check #class length', $('#class').length);
+            logAdmissionDebug('Selector check [name=\"class\"] length', $('[name="class"]').length);
             var initialBoard = $('#admission_board_id').val();
-            console.log('=== PAGE LOAD - Initial Board Selection ===');
-            console.log('Initial board value:', initialBoard);
+            logAdmissionDebug('Initial board value on page load', initialBoard);
             if (initialBoard) {
-                console.log('Triggering change event for initial board');
                 $('#admission_board_id').trigger('change');
-            } else {
-                console.log('No initial board selected');
             }
         })();
     </script>
     @if (!empty($draft_application))
         <script>
             (function() {
-                console.log('=== LOADING DRAFT APPLICATION ===');
+                console.log('[StudentAdmissionDebug]', '=== LOADING DRAFT APPLICATION ===');
                 var draftData = @json(json_decode((string) $draft_application->data_json, true) ?: []);
-                console.log('Draft Data Loaded:', draftData);
+                var skipFields = ['board_id', 'class', 'section'];
+                console.log('[StudentAdmissionDebug]', 'Draft Data Loaded:', draftData);
                 Object.keys(draftData || {}).forEach(function(key) {
                     var value = draftData[key];
-                    console.log('Setting field:', key, 'Value:', value);
+                    console.log('[StudentAdmissionDebug]', 'Setting field:', key, 'Value:', value);
+                    if (skipFields.indexOf(key) !== -1) {
+                        console.log('[StudentAdmissionDebug]', 'Skipping dependent field:', key);
+                        return;
+                    }
                     if (value === null || typeof value === 'object') {
-                        console.log('Skipping field:', key, '(null or object)');
+                        console.log('[StudentAdmissionDebug]', 'Skipping field:', key, '(null or object)');
                         return;
                     }
                     var $field = $('[name="' + key + '"]');
                     if (!$field.length) {
-                        console.log('Field not found in form:', key);
+                        console.log('[StudentAdmissionDebug]', 'Field not found in form:', key);
                         return;
                     }
                     if ($field.is(':checkbox')) {
                         $field.prop('checked', value === true || value === '1' || value === 1);
-                        console.log('Set checkbox:', key, 'checked:', $field.prop('checked'));
+                        console.log('[StudentAdmissionDebug]', 'Set checkbox:', key, 'checked:', $field.prop('checked'));
                     } else {
                         $field.val(value).trigger('change');
-                        console.log('Set field value:', key, 'to:', value);
+                        console.log('[StudentAdmissionDebug]', 'Set field value:', key, 'to:', value);
                     }
                 });
-                console.log('Draft prefill completed');
+                var draftBoard = draftData.board_id;
+                var draftClass = draftData.class;
+                var draftSection = draftData.section;
+                var $boardField = $('#admission_board_id').length ? $('#admission_board_id') : $('[name="board_id"]');
+                console.log('[StudentAdmissionDebug]', 'Board selector exists:', $boardField.length);
+                if (draftBoard && $boardField.length) {
+                    console.log('[StudentAdmissionDebug]', 'Triggering board change for draft board:', draftBoard);
+                    $boardField.val(draftBoard);
+                    if ($.fn.niceSelect) {
+                        $boardField.niceSelect('update');
+                    }
+                    if (typeof loadClassesByBoard === 'function') {
+                        loadClassesByBoard(draftBoard, draftClass, draftSection);
+                    } else {
+                        $boardField.trigger('change');
+                    }
+                }
+                console.log('[StudentAdmissionDebug]', 'Draft prefill completed');
             })();
         </script>
     @endif

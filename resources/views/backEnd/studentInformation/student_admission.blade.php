@@ -2454,6 +2454,99 @@
     <script src="{{ asset('public/backEnd/js/st_addmision.js') }}"></script>
     <script>
         $(document).ready(function() {
+            function admissionDebugPrefix() {
+                return '[StudentAdmissionDebug]';
+            }
+
+            function serializeAjaxData(data) {
+                if (data instanceof FormData) {
+                    const out = {};
+                    data.forEach(function(value, key) {
+                        if (value instanceof File) {
+                            if (!out[key]) {
+                                out[key] = [];
+                            }
+                            out[key].push({
+                                file_name: value.name,
+                                file_size: value.size,
+                                file_type: value.type
+                            });
+                        } else {
+                            if (Object.prototype.hasOwnProperty.call(out, key)) {
+                                if (!Array.isArray(out[key])) {
+                                    out[key] = [out[key]];
+                                }
+                                out[key].push(value);
+                            } else {
+                                out[key] = value;
+                            }
+                        }
+                    });
+                    return out;
+                }
+                return data;
+            }
+
+            function serializeFormData(formData) {
+                const out = {};
+                formData.forEach(function(value, key) {
+                    if (value instanceof File) {
+                        if (!out[key]) {
+                            out[key] = [];
+                        }
+                        out[key].push({
+                            file_name: value.name,
+                            file_size: value.size,
+                            file_type: value.type
+                        });
+                    } else {
+                        if (Object.prototype.hasOwnProperty.call(out, key)) {
+                            if (!Array.isArray(out[key])) {
+                                out[key] = [out[key]];
+                            }
+                            out[key].push(value);
+                        } else {
+                            out[key] = value;
+                        }
+                    }
+                });
+                return out;
+            }
+
+            $('#student_form').on('submit', function() {
+                const debugFormData = new FormData(this);
+                console.log(admissionDebugPrefix(), 'Form submit payload', serializeFormData(debugFormData));
+            });
+
+            $(document).ajaxSend(function(event, jqXHR, settings) {
+                console.log(admissionDebugPrefix(), 'AJAX Request', {
+                    method: settings.type || settings.method || 'GET',
+                    url: settings.url,
+                    data: serializeAjaxData(settings.data)
+                });
+            });
+
+            $(document).ajaxSuccess(function(event, jqXHR, settings, data) {
+                console.log(admissionDebugPrefix(), 'AJAX Success', {
+                    method: settings.type || settings.method || 'GET',
+                    url: settings.url,
+                    request_data: serializeAjaxData(settings.data),
+                    response: data
+                });
+            });
+
+            $(document).ajaxError(function(event, jqXHR, settings, errorThrown) {
+                console.log(admissionDebugPrefix(), 'AJAX Error', {
+                    method: settings.type || settings.method || 'GET',
+                    url: settings.url,
+                    request_data: serializeAjaxData(settings.data),
+                    status: jqXHR.status,
+                    status_text: jqXHR.statusText,
+                    error: errorThrown,
+                    response_text: jqXHR.responseText
+                });
+            });
+
             var currentDate = new Date();
             $('#startDate').datepicker({
                 format: 'mm/dd/yyyy',

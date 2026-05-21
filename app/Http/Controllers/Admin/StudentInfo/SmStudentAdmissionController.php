@@ -77,6 +77,30 @@ class SmStudentAdmissionController extends Controller
     use FeesAssignTrait;
     use NotificationSend;
 
+    private function admissionDebugLog(string $message, array $context = []): void
+    {
+        Log::info('[StudentAdmissionDebug] '.$message, $context);
+    }
+
+    private function normalizeUploadedFiles(array $files): array
+    {
+        $normalized = [];
+        foreach ($files as $key => $file) {
+            if (is_array($file)) {
+                $normalized[$key] = $this->normalizeUploadedFiles($file);
+                continue;
+            }
+
+            $normalized[$key] = [
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+            ];
+        }
+
+        return $normalized;
+    }
+
     public static function loadData()
     {
         $base_setup = SmBaseSetup::get(['id', 'base_setup_name', 'base_group_id']);
@@ -113,6 +137,12 @@ class SmStudentAdmissionController extends Controller
 
     public function index()
     {
+        $this->admissionDebugLog('Controller hit: index', [
+            'route' => optional(request()->route())->getName(),
+            'url' => request()->fullUrl(),
+            'method' => request()->method(),
+            'user_id' => Auth::id(),
+        ]);
 
         /*
         try {
@@ -155,6 +185,16 @@ class SmStudentAdmissionController extends Controller
     public function getClassesByBoard(Request $request, string $board_id)
     {
         try {
+            $decodedBoardId = urldecode($board_id);
+            $this->admissionDebugLog('Controller hit: getClassesByBoard', [
+                'route' => optional($request->route())->getName(),
+                'url' => $request->fullUrl(),
+                'method' => $request->method(),
+                'board_id_raw' => $board_id,
+                'board_id_decoded' => $decodedBoardId,
+                'academic_id_input' => $request->input('academic_id'),
+            ]);
+
             $academicId = $request->input('academic_id', getAcademicId());
             $classes = SmClass::query()
                 ->where('active_status', 1)
@@ -166,8 +206,19 @@ class SmStudentAdmissionController extends Controller
                 ->orderBy('class_name')
                 ->get();
 
+            $this->admissionDebugLog('getClassesByBoard query complete', [
+                'board_id_decoded' => $decodedBoardId,
+                'academic_id' => $academicId,
+                'result_count' => $classes->count(),
+                'returned_json' => $classes->toArray(),
+            ]);
+
             return response()->json($classes);
         } catch (Exception $exception) {
+            $this->admissionDebugLog('getClassesByBoard failed', [
+                'board_id' => $board_id,
+                'error' => $exception->getMessage(),
+            ]);
             return response()->json([], 404);
         }
     }
@@ -175,6 +226,17 @@ class SmStudentAdmissionController extends Controller
     public function getSectionsByBoardClass(Request $request, string $board_id, int $class_id)
     {
         try {
+            $decodedBoardId = urldecode($board_id);
+            $this->admissionDebugLog('Controller hit: getSectionsByBoardClass', [
+                'route' => optional($request->route())->getName(),
+                'url' => $request->fullUrl(),
+                'method' => $request->method(),
+                'board_id_raw' => $board_id,
+                'board_id_decoded' => $decodedBoardId,
+                'class_id_input' => $class_id,
+                'academic_id_input' => $request->input('academic_id'),
+            ]);
+
             $academicId = $request->input('academic_id', getAcademicId());
             $class = SmClass::query()
                 ->where('id', $class_id)
@@ -185,6 +247,11 @@ class SmStudentAdmissionController extends Controller
                 ->first();
 
             if (!$class) {
+                $this->admissionDebugLog('getSectionsByBoardClass class not found for board/class', [
+                    'board_id_decoded' => $decodedBoardId,
+                    'class_id' => $class_id,
+                    'academic_id' => $academicId,
+                ]);
                 return response()->json([]);
             }
 
@@ -199,14 +266,35 @@ class SmStudentAdmissionController extends Controller
                 ->distinct()
                 ->get();
 
+            $this->admissionDebugLog('getSectionsByBoardClass query complete', [
+                'board_id_decoded' => $decodedBoardId,
+                'class_id' => $class_id,
+                'academic_id' => $academicId,
+                'result_count' => $sections->count(),
+                'returned_json' => $sections->toArray(),
+            ]);
+
             return response()->json($sections);
         } catch (Exception $exception) {
+            $this->admissionDebugLog('getSectionsByBoardClass failed', [
+                'board_id' => $board_id,
+                'class_id' => $class_id,
+                'error' => $exception->getMessage(),
+            ]);
             return response()->json([], 404);
         }
     }
 
     public function store(SmStudentAdmissionRequest $smStudentAdmissionRequest)
     {
+        $this->admissionDebugLog('Controller hit: store', [
+            'route' => optional($smStudentAdmissionRequest->route())->getName(),
+            'url' => $smStudentAdmissionRequest->fullUrl(),
+            'method' => $smStudentAdmissionRequest->method(),
+            'request_all' => $smStudentAdmissionRequest->all(),
+            'request_all_files' => $this->normalizeUploadedFiles($smStudentAdmissionRequest->allFiles()),
+        ]);
+
         $parentInfo = $smStudentAdmissionRequest->fathers_name || $smStudentAdmissionRequest->fathers_phone || $smStudentAdmissionRequest->mothers_name || $smStudentAdmissionRequest->mothers_phone || $smStudentAdmissionRequest->guardians_email || $smStudentAdmissionRequest->guardians_phone;
         // add student record
         if ($smStudentAdmissionRequest->filled('phone_number') || $smStudentAdmissionRequest->filled('email_address')) {
@@ -614,9 +702,11 @@ class SmStudentAdmissionController extends Controller
             return redirect()->back();
 
         } catch (Exception $exception) {
-           
+            $this->admissionDebugLog('store failed', [
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
             DB::rollback();
-             dd($exception);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -2114,28 +2204,36 @@ class SmStudentAdmissionController extends Controller
                                     }
                                 } catch (\Illuminate\Database\QueryException|Exception $e) {
                                     DB::rollback();
-                                    dd($e);
+                                    $this->admissionDebugLog('importStudentSaveData query/exception', [
+                                        'error' => $e->getMessage(),
+                                    ]);
                                     Toastr::error('Operation Failed', 'Failed');
 
                                     return redirect()->back();
                                 }
                             } catch (Exception $e) {
                                 DB::rollback();
-                                dd($e);
+                                $this->admissionDebugLog('importStudentSaveData parent block exception', [
+                                    'error' => $e->getMessage(),
+                                ]);
                                 Toastr::error('Operation Failed', 'Failed');
 
                                 return redirect()->back();
                             }
                         } catch (Exception $e) {
                             DB::rollback();
-                            dd($e);
+                            $this->admissionDebugLog('importStudentSaveData child block exception', [
+                                'error' => $e->getMessage(),
+                            ]);
                             Toastr::error('Operation Failed', 'Failed');
 
                             return redirect()->back();
                         }
                     } catch (Exception $e) {
                         DB::rollback();
-                        dd($e);
+                        $this->admissionDebugLog('importStudentSaveData row exception', [
+                            'error' => $e->getMessage(),
+                        ]);
                         Toastr::error('Operation Failed', 'Failed');
 
                         return redirect()->back();
