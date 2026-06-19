@@ -1067,7 +1067,7 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         // Student Module /Student Admission
         Route::get('student-admission', ['as' => 'student_admission', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@index'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission/{student_id}/edit', ['as' => 'student_admission_edit', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@wizardEdit'])->middleware('userRolePermission:student_edit');
-        Route::post('student-admission/{student_id}/update', ['as' => 'student_admission_update', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@wizardUpdate'])->middleware('userRolePermission:student_update');
+        Route::post('student-admission/{student_id}/update', ['as' => 'student_admission_update', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@wizardUpdate']);
         Route::post('student-admission-draft', ['as' => 'student_admission_draft', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@saveDraft'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-applications', ['as' => 'student_admission_applications', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applications'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-applications/{id}', ['as' => 'student_admission_application_show', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationShow'])->middleware('userRolePermission:student_admission');
@@ -1075,6 +1075,7 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('student-admission-applications/{id}/pdf', ['as' => 'student_admission_application_pdf', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@applicationPdf'])->middleware('userRolePermission:student_admission');
         Route::get('admission/get-classes-by-board/{board_id}', ['as' => 'admission.get-classes-by-board', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@getClassesByBoard'])->middleware('userRolePermission:student_admission');
         Route::get('admission/get-sections-by-board-class/{board_id}/{class_id}', ['as' => 'admission.get-sections-by-board-class', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@getSectionsByBoardClass'])->middleware('userRolePermission:student_admission');
+        Route::get('admission/get-students-by-board-class-section/{board_id}/{class_id}/{section_id}', ['as' => 'admission.get-students-by-board-class-section', 'uses' => 'Admin\StudentInfo\SmStudentAdmissionController@getStudentsByBoardClassSection'])->middleware('userRolePermission:student_admission');
         Route::get('student-admission-check/{id}', ['as' => 'student_admission_check', 'uses' => 'SmStudentAdmissionController@admissionCheck']);
         Route::get('student-admission-update-check/{val}/{id}', ['as' => 'student_admission_check_update', 'uses' => 'SmStudentAdmissionController@admissionCheckUpdate']);
         Route::post('student-admission-pic', ['as' => 'student_admission_pic', 'uses' => 'SmStudentAdmissionController@admissionPic']);

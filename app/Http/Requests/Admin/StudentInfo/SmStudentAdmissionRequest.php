@@ -21,6 +21,28 @@ class SmStudentAdmissionRequest extends FormRequest
      */
     use CustomFields;
 
+    private function siblingValue(int $index, string $key)
+    {
+        return data_get($this->input('siblings', []), $index.'.'.$key);
+    }
+
+    private function siblingRowHasAnyValue(int $index, array $keys): bool
+    {
+        foreach ($keys as $key) {
+            $value = $this->siblingValue($index, $key);
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasAnySiblingName(): bool
+    {
+        return $this->siblingRowHasAnyValue(0, ['name']) || $this->siblingRowHasAnyValue(1, ['name']);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -97,6 +119,36 @@ class SmStudentAdmissionRequest extends FormRequest
 
             'admission_number' => ['integer'],
             'board_id' => ['required', 'string', 'max:100'],
+            'sibling_type' => ['nullable', Rule::in(['current_school', 'alumni', 'other_school'])],
+            'sibling_board_id' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'current_school' && $this->hasAnySiblingName();
+            }), 'nullable', 'string', 'max:100'],
+            'sibling_class_id' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'current_school' && $this->hasAnySiblingName();
+            }), 'nullable', 'integer'],
+            'sibling_section_id' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'current_school' && $this->hasAnySiblingName();
+            }), 'nullable', 'integer'],
+            'siblings.0.name' => ['nullable', 'max:100'],
+            'siblings.1.name' => ['nullable', 'max:100'],
+            'siblings.0.student_id' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'current_school' && $this->siblingRowHasAnyValue(0, ['name', 'student_id']);
+            }), 'nullable', 'integer'],
+            'siblings.1.student_id' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'current_school' && $this->siblingRowHasAnyValue(1, ['name', 'student_id']);
+            }), 'nullable', 'integer'],
+            'siblings.0.batch' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'alumni' && $this->siblingRowHasAnyValue(0, ['name', 'batch']);
+            }), 'nullable', 'max:100'],
+            'siblings.1.batch' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'alumni' && $this->siblingRowHasAnyValue(1, ['name', 'batch']);
+            }), 'nullable', 'max:100'],
+            'siblings.0.school_name' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'other_school' && $this->siblingRowHasAnyValue(0, ['name', 'school_name']);
+            }), 'nullable', 'max:200'],
+            'siblings.1.school_name' => [Rule::requiredIf(function (): bool {
+                return $this->sibling_type === 'other_school' && $this->siblingRowHasAnyValue(1, ['name', 'school_name']);
+            }), 'nullable', 'max:200'],
             'id_number' => ['nullable', 'integer'],
 
             'first_name' => ['max:100', Rule::requiredIf(function () use ($field): bool {

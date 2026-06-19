@@ -82,6 +82,11 @@ class SmStudentAdmissionController extends Controller
         Log::info('[StudentAdmissionDebug] '.$message, $context);
     }
 
+    private function siblingDebugLog(string $message, array $context = []): void
+    {
+        Log::info('[SiblingDebug] '.$message, $context);
+    }
+
     private function normalizeUploadedFiles(array $files): array
     {
         $normalized = [];
@@ -389,6 +394,80 @@ class SmStudentAdmissionController extends Controller
                 'class_id' => $class_id,
                 'error' => $exception->getMessage(),
             ]);
+            return response()->json([], 404);
+        }
+    }
+
+    public function getStudentsByBoardClassSection(Request $request, string $board_id, int $class_id, int $section_id)
+    {
+        try {
+            $decodedBoardId = urldecode($board_id);
+            $academicId = $request->input('academic_id', getAcademicId());
+            $this->siblingDebugLog('Controller hit: getStudentsByBoardClassSection', [
+                'route' => optional($request->route())->getName(),
+                'board_id_raw' => $board_id,
+                'board_id_decoded' => $decodedBoardId,
+                'class_id' => $class_id,
+                'section_id' => $section_id,
+                'academic_id_input' => $request->input('academic_id'),
+            ]);
+
+            $class = SmClass::query()
+                ->where('id', $class_id)
+                ->where('school_id', auth()->user()->school_id)
+                ->where('academic_id', $academicId)
+                ->where('board_name', $board_id)
+                ->withoutGlobalScope(StatusAcademicSchoolScope::class)
+                ->first();
+
+            if (! $class) {
+                $this->siblingDebugLog('No class found for sibling student list', [
+                    'board_id_decoded' => $decodedBoardId,
+                    'class_id' => $class_id,
+                    'academic_id' => $academicId,
+                ]);
+
+                return response()->json([]);
+            }
+
+            $students = StudentRecord::query()
+                ->join('sm_students', 'sm_students.id', '=', 'student_records.student_id')
+                ->join('sm_classes', 'sm_classes.id', '=', 'student_records.class_id')
+                ->join('sm_sections', 'sm_sections.id', '=', 'student_records.section_id')
+                ->where('student_records.class_id', $class_id)
+                ->where('student_records.section_id', $section_id)
+                ->where('student_records.academic_id', $academicId)
+                ->where('student_records.school_id', auth()->user()->school_id)
+                ->where('student_records.is_promote', 0)
+                ->where('sm_students.active_status', 1)
+                ->select(
+                    'sm_students.id',
+                    'sm_students.full_name',
+                    'sm_students.admission_no',
+                    'sm_classes.class_name',
+                    'sm_sections.section_name'
+                )
+                ->distinct()
+                ->orderBy('sm_students.full_name')
+                ->get();
+
+            $this->siblingDebugLog('Sibling student API response', [
+                'board_id_decoded' => $decodedBoardId,
+                'class_id' => $class_id,
+                'section_id' => $section_id,
+                'result_count' => $students->count(),
+                'returned_json' => $students->toArray(),
+            ]);
+
+            return response()->json($students);
+        } catch (Exception $exception) {
+            $this->siblingDebugLog('getStudentsByBoardClassSection failed', [
+                'error' => $exception->getMessage(),
+                'board_id' => $board_id,
+                'class_id' => $class_id,
+                'section_id' => $section_id,
+            ]);
+
             return response()->json([], 404);
         }
     }
@@ -932,29 +1011,31 @@ class SmStudentAdmissionController extends Controller
     private function buildWizardEditPayload(SmStudent $student, $defaultRecord): array
     {
         $parent = $student->parents;
-        $siblings = SmStudent::where('parent_id', $student->parent_id)
+        $siblingStudents = SmStudent::where('parent_id', $student->parent_id)
             ->where('id', '!=', $student->id)
             ->take(2)
             ->get()
-            ->map(function (SmStudent $sibling): array {
-                return [
-                    'name' => trim($sibling->full_name ?: $sibling->first_name.' '.$sibling->last_name),
-                    'class' => optional($sibling->defaultClass)->class_name,
-                    'age' => $sibling->age,
-                    'school' => null,
-                ];
-            })
-            ->values()
-            ->all();
+            ->values();
+
+        $siblings = $siblingStudents->map(function (SmStudent $sibling): array {
+            return [
+                'name' => trim($sibling->full_name ?: $sibling->first_name.' '.$sibling->last_name),
+                'student_id' => $sibling->id,
+                'batch' => null,
+                'school_name' => null,
+            ];
+        })->all();
 
         while (count($siblings) < 2) {
             $siblings[] = [
                 'name' => null,
-                'class' => null,
-                'age' => null,
-                'school' => null,
+                'student_id' => null,
+                'batch' => null,
+                'school_name' => null,
             ];
         }
+
+        $firstSiblingRecord = optional($siblingStudents->first())->defaultClass;
 
         return [
             'id' => $student->id,
@@ -1005,6 +1086,10 @@ class SmStudentAdmissionController extends Controller
             'guardians_address' => $parent->guardians_address ?? null,
             'guardians_phone' => $parent->guardians_mobile ?? null,
             'guardians_email' => $parent->guardians_email ?? null,
+            'sibling_type' => $siblingStudents->isNotEmpty() ? 'current_school' : null,
+            'sibling_board_id' => $firstSiblingRecord->board_name ?? optional($siblingStudents->first())->board_name,
+            'sibling_class_id' => $firstSiblingRecord->class_id ?? null,
+            'sibling_section_id' => $firstSiblingRecord->section_id ?? null,
             'siblings' => $siblings,
             'document_title_1' => $student->document_title_1,
             'document_title_2' => $student->document_title_2,

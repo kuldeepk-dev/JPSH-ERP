@@ -510,31 +510,86 @@
                         <div class="admission-card">
                             <h4>Sibling Details</h4>
                             <div class="row">
-                                <div class="col-lg-12">
-                                    <table class="table table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Class</th>
-                                                <th>Age</th>
-                                                <th>School</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td><input class="form-control" name="siblings[0][name]"></td>
-                                                <td><input class="form-control" name="siblings[0][class]"></td>
-                                                <td><input class="form-control" name="siblings[0][age]"></td>
-                                                <td><input class="form-control" name="siblings[0][school]"></td>
-                                            </tr>
-                                            <tr>
-                                                <td><input class="form-control" name="siblings[1][name]"></td>
-                                                <td><input class="form-control" name="siblings[1][class]"></td>
-                                                <td><input class="form-control" name="siblings[1][age]"></td>
-                                                <td><input class="form-control" name="siblings[1][school]"></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="col-lg-6 mt-3">
+                                    <label class="primary_input_label">Sibling Type</label>
+                                    <select class="primary_select form-control" name="sibling_type" id="sibling_type">
+                                        <option value="">Select Sibling Type</option>
+                                        <option value="current_school">Presently studying in current school</option>
+                                        <option value="alumni">Alumni of current school</option>
+                                        <option value="other_school">Studying in other school</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-6 mt-3">
+                                    <label class="primary_input_label">Sibling Name 1</label>
+                                    <input class="primary_input_field form-control" name="siblings[0][name]">
+                                </div>
+                                <div class="col-lg-6 mt-3">
+                                    <label class="primary_input_label">Sibling Name 2</label>
+                                    <input class="primary_input_field form-control" name="siblings[1][name]">
+                                </div>
+
+                                <div class="col-lg-12 d-none sibling-conditional-group" id="sibling_current_school_fields">
+                                    <div class="row">
+                                        <div class="col-lg-4 mt-3">
+                                            <label class="primary_input_label">Sibling Board</label>
+                                            <select class="primary_select form-control" name="sibling_board_id" id="sibling_board_id">
+                                                <option value="">Select Board</option>
+                                                @foreach (generalBoards() as $board)
+                                                    <option value="{{ $board }}">{{ $board }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-4 mt-3">
+                                            <label class="primary_input_label">Sibling Class</label>
+                                            <select class="primary_select form-control" name="sibling_class_id" id="sibling_class_id" disabled>
+                                                <option value="">Select Class</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-4 mt-3">
+                                            <label class="primary_input_label">Sibling Section</label>
+                                            <select class="primary_select form-control" name="sibling_section_id" id="sibling_section_id" disabled>
+                                                <option value="">Select Section</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling Brother / Sister 1</label>
+                                            <select class="primary_select form-control" name="siblings[0][student_id]" id="siblings_0_student_id" disabled>
+                                                <option value="">Select Student</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling Brother / Sister 2</label>
+                                            <select class="primary_select form-control" name="siblings[1][student_id]" id="siblings_1_student_id" disabled>
+                                                <option value="">Select Student</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-12 d-none sibling-conditional-group" id="sibling_alumni_fields">
+                                    <div class="row">
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling Batch / Year 1</label>
+                                            <input class="primary_input_field form-control" name="siblings[0][batch]">
+                                        </div>
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling Batch / Year 2</label>
+                                            <input class="primary_input_field form-control" name="siblings[1][batch]">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-12 d-none sibling-conditional-group" id="sibling_other_school_fields">
+                                    <div class="row">
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling School Name 1</label>
+                                            <input class="primary_input_field form-control" name="siblings[0][school_name]">
+                                        </div>
+                                        <div class="col-lg-6 mt-3">
+                                            <label class="primary_input_label">Sibling School Name 2</label>
+                                            <input class="primary_input_field form-control" name="siblings[1][school_name]">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-lg-4 mt-3">
                                     <label class="primary_input_label">Single Girl Child</label>
@@ -945,6 +1000,164 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 });
             }
 
+            function siblingLog(message, payload) {
+                if (typeof payload === 'undefined') {
+                    console.log('[SiblingDebug]', message);
+                } else {
+                    console.log('[SiblingDebug]', message, payload);
+                }
+            }
+
+            function resetSiblingStudentSelects() {
+                ['#siblings_0_student_id', '#siblings_1_student_id'].forEach(function(selector) {
+                    var $select = $(selector);
+                    $select.empty().append('<option value="">Select Student</option>').prop('disabled', true);
+                    updateNiceSelect($select);
+                });
+            }
+
+            function resetSiblingConditionalFields() {
+                $('#sibling_board_id').val('');
+                $('#sibling_class_id').empty().append('<option value="">Select Class</option>').prop('disabled', true);
+                $('#sibling_section_id').empty().append('<option value="">Select Section</option>').prop('disabled', true);
+                resetSiblingStudentSelects();
+                $('[name="siblings[0][batch]"], [name="siblings[1][batch]"], [name="siblings[0][school_name]"], [name="siblings[1][school_name]"]').val('');
+                updateNiceSelect($('#sibling_board_id'));
+                updateNiceSelect($('#sibling_class_id'));
+                updateNiceSelect($('#sibling_section_id'));
+                siblingLog('sibling fields reset');
+            }
+
+            function hideSiblingConditionalGroups() {
+                $('.sibling-conditional-group').addClass('d-none');
+            }
+
+            function toggleSiblingFields(type) {
+                hideSiblingConditionalGroups();
+                resetSiblingConditionalFields();
+                siblingLog('sibling type changed', type);
+
+                if (type === 'current_school') {
+                    $('#sibling_current_school_fields').removeClass('d-none');
+                } else if (type === 'alumni') {
+                    $('#sibling_alumni_fields').removeClass('d-none');
+                } else if (type === 'other_school') {
+                    $('#sibling_other_school_fields').removeClass('d-none');
+                }
+            }
+
+            function loadSiblingClassesByBoard(boardId, selectedClassId, selectedSectionId, selectedStudentIds) {
+                if (!boardId) {
+                    return;
+                }
+
+                var apiUrl = $('#url').val() + '/admission/get-classes-by-board/' + encodeURIComponent(boardId);
+                siblingLog('loading sibling classes', {
+                    board_id: boardId,
+                    url: apiUrl
+                });
+
+                $.get(apiUrl, { academic_id: $('#academic_year').val() })
+                    .done(function(response) {
+                        siblingLog('sibling API response', response);
+                        var classes = Array.isArray(response) ? response : (response.classes || []);
+                        var $class = $('#sibling_class_id');
+                        $class.empty().append('<option value="">Select Class</option>');
+
+                        if (classes.length) {
+                            $class.prop('disabled', false);
+                            classes.forEach(function(item) {
+                                $class.append('<option value="' + item.id + '">' + item.class_name + '</option>');
+                            });
+                        } else {
+                            $class.prop('disabled', true);
+                        }
+
+                        updateNiceSelect($class);
+                        if (selectedClassId) {
+                            $class.val(selectedClassId);
+                            updateNiceSelect($class);
+                            loadSiblingSectionsByBoardClass(boardId, selectedClassId, selectedSectionId, selectedStudentIds);
+                        }
+                    });
+            }
+
+            function loadSiblingSectionsByBoardClass(boardId, classId, selectedSectionId, selectedStudentIds) {
+                if (!boardId || !classId) {
+                    return;
+                }
+
+                var apiUrl = $('#url').val() + '/admission/get-sections-by-board-class/' + encodeURIComponent(boardId) + '/' + classId;
+                siblingLog('loading sibling sections', {
+                    board_id: boardId,
+                    class_id: classId,
+                    url: apiUrl
+                });
+
+                $.get(apiUrl, { academic_id: $('#academic_year').val() })
+                    .done(function(response) {
+                        siblingLog('sibling API response', response);
+                        var sections = Array.isArray(response) ? response : (response.sections || []);
+                        var $section = $('#sibling_section_id');
+                        $section.empty().append('<option value="">Select Section</option>');
+
+                        if (sections.length) {
+                            $section.prop('disabled', false);
+                            sections.forEach(function(item) {
+                                $section.append('<option value="' + item.id + '">' + item.section_name + '</option>');
+                            });
+                        } else {
+                            $section.prop('disabled', true);
+                        }
+
+                        updateNiceSelect($section);
+                        if (selectedSectionId) {
+                            $section.val(selectedSectionId);
+                            updateNiceSelect($section);
+                            loadSiblingStudentsByBoardClassSection(boardId, classId, selectedSectionId, selectedStudentIds);
+                        }
+                    });
+            }
+
+            function loadSiblingStudentsByBoardClassSection(boardId, classId, sectionId, selectedStudentIds) {
+                if (!boardId || !classId || !sectionId) {
+                    resetSiblingStudentSelects();
+                    return;
+                }
+
+                var apiUrl = $('#url').val() + '/admission/get-students-by-board-class-section/' + encodeURIComponent(boardId) + '/' + classId + '/' + sectionId;
+                siblingLog('loading sibling student list', {
+                    board_id: boardId,
+                    class_id: classId,
+                    section_id: sectionId,
+                    url: apiUrl
+                });
+
+                $.get(apiUrl, { academic_id: $('#academic_year').val() })
+                    .done(function(response) {
+                        siblingLog('sibling API response', response);
+                        var students = Array.isArray(response) ? response : (response.students || []);
+                        ['#siblings_0_student_id', '#siblings_1_student_id'].forEach(function(selector, index) {
+                            var $select = $(selector);
+                            $select.empty().append('<option value="">Select Student</option>');
+
+                            if (students.length) {
+                                $select.prop('disabled', false);
+                                students.forEach(function(student) {
+                                    $select.append('<option value="' + student.id + '">' + student.full_name + ' (' + student.admission_no + ')</option>');
+                                });
+                            } else {
+                                $select.prop('disabled', true);
+                            }
+
+                            if (selectedStudentIds && selectedStudentIds[index]) {
+                                $select.val(selectedStudentIds[index]);
+                            }
+                            updateNiceSelect($select);
+                        });
+                    });
+            }
+
             function refreshSelectField($field) {
                 if (!$field.length) {
                     return;
@@ -979,7 +1192,7 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 logAdmissionDebug('Edit mode detected');
                 logAdmissionDebug('Student edit data loaded', studentData);
 
-                var skipFields = ['board_id', 'class', 'section', 'existing_documents', 'siblings'];
+                var skipFields = ['board_id', 'class', 'section', 'existing_documents', 'siblings', 'sibling_type', 'sibling_board_id', 'sibling_class_id', 'sibling_section_id'];
                 Object.keys(studentData).forEach(function(key) {
                     var value = studentData[key];
                     if (skipFields.indexOf(key) !== -1 || value === null || typeof value === 'object') {
@@ -1004,6 +1217,13 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 var editBoard = studentData.board_id;
                 var editClass = studentData.class;
                 var editSection = studentData.section;
+                var siblingType = studentData.sibling_type;
+                var siblingBoard = studentData.sibling_board_id;
+                var siblingClass = studentData.sibling_class_id;
+                var siblingSection = studentData.sibling_section_id;
+                var siblingStudentIds = Array.isArray(studentData.siblings) ? studentData.siblings.map(function(item) {
+                    return item ? item.student_id : '';
+                }) : [];
                 var $boardField = getBoardSelect();
 
                 if (editBoard && $boardField.length) {
@@ -1018,6 +1238,16 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     if (editSection) {
                         logAdmissionDebug('Loading sections for edit class', editClass);
                         logAdmissionDebug('Setting section', editSection);
+                    }
+                }
+
+                if (siblingType) {
+                    setFieldValue('sibling_type', siblingType);
+                    toggleSiblingFields(siblingType);
+                    if (siblingType === 'current_school' && siblingBoard) {
+                        $('#sibling_board_id').val(siblingBoard);
+                        updateNiceSelect($('#sibling_board_id'));
+                        loadSiblingClassesByBoard(siblingBoard, siblingClass, siblingSection, siblingStudentIds);
                     }
                 }
             }
@@ -1173,6 +1403,35 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     return;
                 }
                 loadSectionsByBoardClass(board, classId, '');
+            });
+
+            $(document).on('change', '#sibling_type', function() {
+                toggleSiblingFields($(this).val());
+            });
+
+            $(document).on('change', '#sibling_board_id', function() {
+                resetSiblingConditionalFields();
+                $('#sibling_board_id').val($(this).val());
+                updateNiceSelect($('#sibling_board_id'));
+                if ($(this).val()) {
+                    loadSiblingClassesByBoard($(this).val(), '', '', []);
+                }
+            });
+
+            $(document).on('change', '#sibling_class_id', function() {
+                $('#sibling_section_id').empty().append('<option value="">Select Section</option>').prop('disabled', true);
+                updateNiceSelect($('#sibling_section_id'));
+                resetSiblingStudentSelects();
+                if ($('#sibling_board_id').val() && $(this).val()) {
+                    loadSiblingSectionsByBoardClass($('#sibling_board_id').val(), $(this).val(), '', []);
+                }
+            });
+
+            $(document).on('change', '#sibling_section_id', function() {
+                resetSiblingStudentSelects();
+                if ($('#sibling_board_id').val() && $('#sibling_class_id').val() && $(this).val()) {
+                    loadSiblingStudentsByBoardClassSection($('#sibling_board_id').val(), $('#sibling_class_id').val(), $(this).val(), []);
+                }
             });
 
             $(document).on('input change', '#student_admission_form input, #student_admission_form select, #student_admission_form textarea', function() {
