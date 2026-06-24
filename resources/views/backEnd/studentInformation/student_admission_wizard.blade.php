@@ -7,36 +7,65 @@
     <style>
         .admission-wizard {
             display: grid;
-            grid-template-columns: 260px 1fr;
+            grid-template-columns: 300px minmax(0, 1fr);
             gap: 24px;
+            align-items: start;
         }
 
         .admission-stepper {
             position: sticky;
             top: 90px;
             align-self: start;
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+            background:
+                radial-gradient(circle at top right, rgba(71, 103, 255, 0.12), transparent 34%),
+                linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+            border: 1px solid rgba(100, 116, 139, 0.12);
+            border-radius: 24px;
+            padding: 24px 22px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
         }
 
         .admission-stepper h4 {
-            margin-bottom: 16px;
+            margin-bottom: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2a44;
+        }
+
+        .admission-progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .admission-progress-step {
+            font-size: 15px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .admission-progress-percent {
+            font-size: 18px;
+            font-weight: 700;
+            color: #4967ff;
+            white-space: nowrap;
         }
 
         .admission-progress {
-            height: 6px;
-            background: #e9edf1;
-            border-radius: 6px;
+            height: 8px;
+            background: #e8edf7;
+            border-radius: 999px;
             overflow: hidden;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
         }
 
         .admission-progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #1a73e8, #00bcd4);
+            background: linear-gradient(90deg, #4967ff 0%, #5d8bff 100%);
             width: 0;
+            border-radius: 999px;
             transition: width 0.3s ease;
         }
 
@@ -47,34 +76,105 @@
         }
 
         .step-list li {
+            position: relative;
             display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
+            gap: 14px;
+            padding: 0 0 18px;
             color: #6b7280;
-            font-size: 13px;
         }
 
-        .step-list li.active {
-            color: #111827;
-            font-weight: 600;
+        .step-list li:last-child {
+            padding-bottom: 0;
+        }
+
+        .step-list li:last-child .step-connector {
+            display: none;
+        }
+
+        .step-marker {
+            position: relative;
+            width: 30px;
+            flex: 0 0 30px;
+            display: flex;
+            justify-content: center;
         }
 
         .step-index {
-            height: 26px;
-            width: 26px;
+            position: relative;
+            z-index: 1;
+            height: 30px;
+            width: 30px;
             border-radius: 50%;
-            background: #e5e7eb;
-            color: #111827;
+            border: 1.5px solid #d4dceb;
+            background: #ffffff;
+            color: #1f2937;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.25s ease;
+        }
+
+        .step-connector {
+            position: absolute;
+            top: 30px;
+            bottom: -18px;
+            left: 50%;
+            width: 2px;
+            transform: translateX(-50%);
+            background: #e2e8f0;
+        }
+
+        .step-content {
+            padding-top: 2px;
+        }
+
+        .step-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.35;
+            color: #1f2937;
+        }
+
+        .step-description {
+            margin-top: 3px;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #7b8798;
+        }
+
+        .step-list li.active::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 3px;
+            width: 4px;
+            height: 34px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #4967ff 0%, #6b84ff 100%);
         }
 
         .step-list li.active .step-index {
-            background: #1a73e8;
+            border-color: #4967ff;
+            background: linear-gradient(135deg, #4967ff 0%, #5a7cff 100%);
             color: #ffffff;
+            box-shadow: 0 10px 20px rgba(73, 103, 255, 0.28);
+        }
+
+        .step-list li.active .step-title {
+            color: #3150ed;
+        }
+
+        .step-list li.completed .step-index {
+            border-color: #9eb0ff;
+            background: #eef2ff;
+            color: #3150ed;
+        }
+
+        .step-list li.completed .step-connector {
+            background: linear-gradient(180deg, #9eb0ff 0%, #e2e8f0 100%);
         }
 
         .admission-card {
@@ -144,6 +244,22 @@
                 position: static;
             }
         }
+
+        @media (max-width: 576px) {
+            .admission-stepper {
+                padding: 20px 16px;
+                border-radius: 18px;
+            }
+
+            .admission-progress-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .step-list li.active::before {
+                left: -16px;
+            }
+        }
     </style>
 @endpush
 
@@ -177,19 +293,103 @@
             <div class="admission-wizard">
                 <div class="admission-stepper">
                     <h4>{{ $page_title ?? 'Admission Progress' }}</h4>
+                    <div class="admission-progress-header">
+                        <div class="admission-progress-step" id="admission_progress_step_text">Step 1 of 9</div>
+                        <div class="admission-progress-percent" id="admission_progress_percent">11% Completed</div>
+                    </div>
                     <div class="admission-progress">
                         <div class="admission-progress-bar" id="admission_progress_bar"></div>
                     </div>
                     <ul class="step-list" id="admission_step_list">
-                        <li class="active" data-step="1"><span class="step-index">1</span> Student Information</li>
-                        <li data-step="2"><span class="step-index">2</span> Residential Address</li>
-                        <li data-step="3"><span class="step-index">3</span> Parent Details</li>
-                        <li data-step="4"><span class="step-index">4</span> Family &amp; Additional Info</li>
-                        <li data-step="5"><span class="step-index">5</span> Last School Attended</li>
-                        <li data-step="6"><span class="step-index">6</span> Achievements</li>
-                        <li data-step="7"><span class="step-index">7</span> Transport &amp; Voluntary Services</li>
-                        <li data-step="8"><span class="step-index">8</span> Documents Upload</li>
-                        <li data-step="9"><span class="step-index">9</span> Declaration &amp; Consent</li>
+                        <li class="active" data-step="1">
+                            <div class="step-marker">
+                                <span class="step-index">1</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Student Information</p>
+                                <div class="step-description">Add basic student details</div>
+                            </div>
+                        </li>
+                        <li data-step="2">
+                            <div class="step-marker">
+                                <span class="step-index">2</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Residential Address</p>
+                                <div class="step-description">Add student's address</div>
+                            </div>
+                        </li>
+                        <li data-step="3">
+                            <div class="step-marker">
+                                <span class="step-index">3</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Parent Details</p>
+                                <div class="step-description">Enter parent/guardian details</div>
+                            </div>
+                        </li>
+                        <li data-step="4">
+                            <div class="step-marker">
+                                <span class="step-index">4</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Family &amp; Additional Info</p>
+                                <div class="step-description">Provide family &amp; additional info</div>
+                            </div>
+                        </li>
+                        <li data-step="5">
+                            <div class="step-marker">
+                                <span class="step-index">5</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Last School Attended</p>
+                                <div class="step-description">Add previous school details</div>
+                            </div>
+                        </li>
+                        <li data-step="6">
+                            <div class="step-marker">
+                                <span class="step-index">6</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Achievements</p>
+                                <div class="step-description">Add student achievements</div>
+                            </div>
+                        </li>
+                        <li data-step="7">
+                            <div class="step-marker">
+                                <span class="step-index">7</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Transport &amp; Services</p>
+                                <div class="step-description">Transport &amp; additional services</div>
+                            </div>
+                        </li>
+                        <li data-step="8">
+                            <div class="step-marker">
+                                <span class="step-index">8</span>
+                                <span class="step-connector"></span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Documents Upload</p>
+                                <div class="step-description">Upload required documents</div>
+                            </div>
+                        </li>
+                        <li data-step="9">
+                            <div class="step-marker">
+                                <span class="step-index">9</span>
+                            </div>
+                            <div class="step-content">
+                                <p class="step-title">Declaration &amp; Consent</p>
+                                <div class="step-description">Accept terms &amp; conditions</div>
+                            </div>
+                        </li>
                     </ul>
                 </div>
 
@@ -214,7 +414,7 @@
                                     <select class="primary_select form-control" id="admission_board_id" name="board_id" required>
                                         <option value="">Select Board</option>
                                         @foreach (generalBoards() as $board)
-                                            <option value="{{ $board }}" {{ old('board_id', selectedBoard()) === $board ? 'selected' : '' }}>
+                                            <option value="{{ $board }}" {{ old('board_id') === $board ? 'selected' : '' }}>
                                                 {{ $board }}
                                             </option>
                                         @endforeach
@@ -234,7 +434,7 @@
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Admission Number<span class="required-star">*</span></label>
-                                    <input class="primary_input_field form-control" name="admission_number" value="{{ $max_admission_id != '' ? $max_admission_id + 1 : 1 }}" required>
+                                    <input class="primary_input_field form-control" name="admission_number" value="{{ old('admission_number') }}" required>
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Roll Number</label>
@@ -242,7 +442,7 @@
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Admission Date<span class="required-star">*</span></label>
-                                    <input class="primary_input_field form-control" type="date" name="admission_date" value="{{ old('admission_date', date('Y-m-d')) }}" required>
+                                    <input class="primary_input_field form-control" type="date" name="admission_date" value="{{ old('admission_date', now()->format('Y-m-d')) }}" required>
                                 </div>
                                 <div class="col-lg-6 mt-3">
                                     <label class="primary_input_label">Student First Name<span class="required-star">*</span></label>
@@ -810,11 +1010,15 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 });
 
                 document.querySelectorAll('#admission_step_list li').forEach(function(item) {
-                    item.classList.toggle('active', parseInt(item.dataset.step, 10) === currentStep);
+                    var stepNumber = parseInt(item.dataset.step, 10);
+                    item.classList.toggle('active', stepNumber === currentStep);
+                    item.classList.toggle('completed', stepNumber < currentStep);
                 });
 
-                var progress = (currentStep / totalSteps) * 100;
+                var progress = Math.round((currentStep / totalSteps) * 100);
                 document.getElementById('admission_progress_bar').style.width = progress + '%';
+                document.getElementById('admission_progress_step_text').textContent = 'Step ' + currentStep + ' of ' + totalSteps;
+                document.getElementById('admission_progress_percent').textContent = progress + '% Completed';
                 document.getElementById('prev_step').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
                 document.getElementById('next_step').style.display = currentStep === totalSteps ? 'none' : 'inline-flex';
                 document.getElementById('submit_admission').style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
@@ -826,14 +1030,39 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     return true;
                 }
                 var valid = true;
+                var firstInvalidField = null;
+
                 stepEl.querySelectorAll('[required]').forEach(function(input) {
-                    if (!input.value || (input.type === 'checkbox' && !input.checked)) {
+                    var isCheckbox = input.type === 'checkbox';
+                    var isEmpty = isCheckbox ? !input.checked : !input.value;
+                    var $input = $(input);
+                    var $visibleTarget = getVisibleFieldTarget($input);
+
+                    if (isEmpty) {
                         input.classList.add('input-error');
+                        input.classList.add('is-invalid');
+                        $visibleTarget.addClass('is-invalid');
                         valid = false;
+                        if (!firstInvalidField) {
+                            firstInvalidField = input;
+                        }
                     } else {
                         input.classList.remove('input-error');
+                        input.classList.remove('is-invalid');
+                        $visibleTarget.removeClass('is-invalid');
                     }
                 });
+
+                if (!valid && firstInvalidField) {
+                    activateStepForField($(firstInvalidField));
+                    var $firstField = $(firstInvalidField);
+                    var $target = getVisibleFieldTarget($firstField);
+                    $('html, body').animate({
+                        scrollTop: Math.max($target.offset().top - 140, 0)
+                    }, 300);
+                    $firstField.trigger('focus');
+                }
+
                 return valid;
             }
 
@@ -1016,15 +1245,21 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                 });
             }
 
-            function resetSiblingConditionalFields() {
-                $('#sibling_board_id').val('');
+            function resetSiblingDependentFields() {
                 $('#sibling_class_id').empty().append('<option value="">Select Class</option>').prop('disabled', true);
                 $('#sibling_section_id').empty().append('<option value="">Select Section</option>').prop('disabled', true);
                 resetSiblingStudentSelects();
-                $('[name="siblings[0][batch]"], [name="siblings[1][batch]"], [name="siblings[0][school_name]"], [name="siblings[1][school_name]"]').val('');
-                updateNiceSelect($('#sibling_board_id'));
                 updateNiceSelect($('#sibling_class_id'));
                 updateNiceSelect($('#sibling_section_id'));
+            }
+
+            function resetSiblingConditionalFields(preserveBoardValue) {
+                if (!preserveBoardValue) {
+                    $('#sibling_board_id').val('');
+                    updateNiceSelect($('#sibling_board_id'));
+                }
+                resetSiblingDependentFields();
+                $('[name="siblings[0][batch]"], [name="siblings[1][batch]"], [name="siblings[0][school_name]"], [name="siblings[1][school_name]"]').val('');
                 siblingLog('sibling fields reset');
             }
 
@@ -1410,11 +1645,10 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
             });
 
             $(document).on('change', '#sibling_board_id', function() {
-                resetSiblingConditionalFields();
-                $('#sibling_board_id').val($(this).val());
-                updateNiceSelect($('#sibling_board_id'));
-                if ($(this).val()) {
-                    loadSiblingClassesByBoard($(this).val(), '', '', []);
+                var selectedBoard = $(this).val();
+                resetSiblingDependentFields();
+                if (selectedBoard) {
+                    loadSiblingClassesByBoard(selectedBoard, '', '', []);
                 }
             });
 
@@ -1579,7 +1813,7 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
             }
         })();
     </script>
-    @if (!empty($draft_application))
+    @if (!empty($draft_application) && false)
         <script>
             (function() {
                 console.log('[StudentAdmissionDebug]', '=== LOADING DRAFT APPLICATION ===');
@@ -1591,6 +1825,10 @@ Parent/Guardian declaration, fee acknowledgement, discipline and policy agreemen
                     console.log('[StudentAdmissionDebug]', 'Setting field:', key, 'Value:', value);
                     if (skipFields.indexOf(key) !== -1) {
                         console.log('[StudentAdmissionDebug]', 'Skipping dependent field:', key);
+                        return;
+                    }
+                    if (key === 'admission_date' && !value) {
+                        console.log('[StudentAdmissionDebug]', 'Skipping empty admission date so today remains the default');
                         return;
                     }
                     if (value === null || typeof value === 'object') {
